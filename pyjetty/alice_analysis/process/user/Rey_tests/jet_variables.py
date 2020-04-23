@@ -97,7 +97,7 @@ class process_ang_data(process_base.ProcessBase):
   def initialize_config(self):
 
     # Set configuration for analysis
-    self.jetR_list = [0.4]
+    self.jetR_list = [0.4,0.2]
 
     # SoftDrop configuration
     self.sd_zcut = 0.1
@@ -115,19 +115,26 @@ class process_ang_data(process_base.ProcessBase):
     outf = ROOT.TFile('RTreeWriter_test.root', 'recreate')
     outf.cd()
 
-    # Tree to store result without softdrop
-    t = ROOT.TTree('Tree', 'Tree')
-    tw = treewriter.RTreeWriter(tree=t)
-
-    # Tree to store results with softdrop
-    tsd = []
+    #t = []
+    tw = []
+    #t_sd = []
+    tw_sd_2d = []
     tw_sd = []
-    for itm in range(len(self.sd_beta_par)):
-      tw_sd.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_sd_beta_{}'.format(self.sd_beta_par[itm]),'Tree_sd_beta_{}'.format(self.sd_beta_par[itm]))))
+
+    for njetR in range(len(self.jetR_list)):
+      tw.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}'.format(self.jetR_list[njetR]),'Tree_R{}'.format(self.jetR_list[njetR])))) 
+
+      # Tree to store results with softdrop
+      for itm in range(len(self.sd_beta_par)):
+        tw_sd.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]),'Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]))))
+      tw_sd_2d.append(tw_sd)
+      tw_sd = []
 
     # -----------------------------------------------------
     # Loop over jet radii list
     for jetR in self.jetR_list:
+
+      jetRidx = self.jetR_list.index(jetR)
 
       # Set jet definition and a jet selector
       jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
@@ -161,12 +168,12 @@ class process_ang_data(process_base.ProcessBase):
           for constit in jet.constituents():
             theta_i_jet = float(deltaR(constit,jet))
 
-            tw.fill_branch("constit_over_jet_pt_R_{}".format(jetR),constit.pt()/jet.pt()  )
-            tw.fill_branch("theta_constit_jet_R_{}".format(jetR)  ,theta_i_jet            )
-            tw.fill_branch("n_constituents_R_{}".format(jetR)     ,len(jet.constituents()))
-            tw.fill_branch("jet_pt_R_{}".format(jetR)             ,jet.pt()               )
+            tw[jetRidx].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()  )
+            tw[jetRidx].fill_branch("theta_constit_jet"  ,theta_i_jet            )
+            tw[jetRidx].fill_branch("n_constituents"     ,len(jet.constituents()))
+            tw[jetRidx].fill_branch("jet_pt"             ,jet.pt()               )
 
-            tw.fill_tree()
+            tw[jetRidx].fill_tree()
 
           # Soft-drop groomed jet
           for itm in range(len(self.sd_beta_par)):
@@ -174,12 +181,12 @@ class process_ang_data(process_base.ProcessBase):
             for constit in sd_jet.constituents(): 
               sd_theta_i_jet = float(deltaR(constit,sd_jet))
 
-              tw_sd[itm].fill_branch("constit_over_jet_pt_R_{}".format(jetR),constit.pt()/jet.pt()  )
-              tw_sd[itm].fill_branch("theta_constit_jet_R_{}".format(jetR)  ,theta_i_jet            )
-              tw_sd[itm].fill_branch("n_constituents_R_{}".format(jetR)     ,len(jet.constituents()))
-              tw_sd[itm].fill_branch("jet_pt_R_{}".format(jetR)             ,jet.pt()               )
+              tw_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/sd_jet.pt()  )
+              tw_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,theta_i_jet               )
+              tw_sd_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sd_jet.constituents()))
+              tw_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,sd_jet.pt()               )
 
-              tw_sd[itm].fill_tree()
+              tw_sd_2d[jetRidx][itm].fill_tree()
 
     outf.Write()
     outf.Close()
