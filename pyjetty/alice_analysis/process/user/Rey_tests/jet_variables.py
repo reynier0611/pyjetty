@@ -182,7 +182,7 @@ class process_ang_data(process_base.ProcessBase):
               sd_theta_i_jet = float(deltaR(constit,sd_jet))
 
               tw_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/sd_jet.pt()  )
-              tw_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,theta_i_jet               )
+              tw_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sd_theta_i_jet            )
               tw_sd_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sd_jet.constituents()))
               tw_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,sd_jet.pt()               )
 
