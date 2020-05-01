@@ -52,6 +52,19 @@ def deltaR(pjet1, pjet2):
   return np.sqrt( (pjet1.eta() - pjet2.eta())**2 + (phi1 - pjet2.phi())**2 )
 
 ################################################################
+def softkeep(jet_full, jet_groomed):
+  sk_idx_list = []
+  for cons1 in jet_full.constituents():
+     notgroomed = False
+     for cons2 in jet_groomed.constituents():
+       if(cons1.user_index()==cons2.user_index()):
+         notgroomed = True
+     if(notgroomed==False):
+       #sk_idx_list.append(cons1)
+       sk_idx_list.append(cons1.user_index())
+  return sk_idx_list
+
+################################################################
 class process_ang_data(process_base.ProcessBase):
 
   #---------------------------------------------------------------
@@ -115,11 +128,11 @@ class process_ang_data(process_base.ProcessBase):
     outf = ROOT.TFile('RTreeWriter_test.root', 'recreate')
     outf.cd()
 
-    #t = []
     tw = []
-    #t_sd = []
     tw_sd_2d = []
     tw_sd = []
+    tw_sk_2d = []
+    tw_sk = []
 
     for njetR in range(len(self.jetR_list)):
       tw.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}'.format(self.jetR_list[njetR]),'Tree_R{}'.format(self.jetR_list[njetR])))) 
@@ -127,8 +140,11 @@ class process_ang_data(process_base.ProcessBase):
       # Tree to store results with softdrop
       for itm in range(len(self.sd_beta_par)):
         tw_sd.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]),'Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]))))
+        tw_sk.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sk_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]),'Tree_R{}_sk_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]))))
       tw_sd_2d.append(tw_sd)
+      tw_sk_2d.append(tw_sk)
       tw_sd = []
+      tw_sk = []
 
     # -----------------------------------------------------
     # Loop over jet radii list
@@ -168,6 +184,8 @@ class process_ang_data(process_base.ProcessBase):
           for constit in jet.constituents():
             theta_i_jet = float(deltaR(constit,jet))
 
+            #print(theta_i_jet,' ',jet.delta_R(constit),' ',theta_i_jet-jet.delta_R(constit))
+
             tw[jetRidx].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()  )
             tw[jetRidx].fill_branch("theta_constit_jet"  ,theta_i_jet            )
             tw[jetRidx].fill_branch("n_constituents"     ,len(jet.constituents()))
@@ -178,15 +196,29 @@ class process_ang_data(process_base.ProcessBase):
           # Soft-drop groomed jet
           for itm in range(len(self.sd_beta_par)):
             sd_jet = (sd_list[itm]).result(jet)
-            for constit in sd_jet.constituents(): 
-              sd_theta_i_jet = float(deltaR(constit,sd_jet))
 
-              tw_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/sd_jet.pt()  )
+            for constit in sd_jet.constituents(): 
+              sd_theta_i_jet = float(deltaR(constit,jet))
+
+              tw_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()     )
               tw_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sd_theta_i_jet            )
               tw_sd_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sd_jet.constituents()))
-              tw_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,sd_jet.pt()               )
+              tw_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet.pt()                  )
 
               tw_sd_2d[jetRidx][itm].fill_tree()
+
+            # 'Soft-kept' stuff
+            sk_idx = softkeep(jet,sd_jet) # List with indices of hadrons that were groomed away
+            for constit in jet.constituents():
+              if(constit.user_index() in sk_idx):
+                sk_theta_i_jet = float(deltaR(constit,jet))
+
+                tw_sk_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()  )
+                tw_sk_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sk_theta_i_jet         )
+                tw_sk_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sk_idx)            )
+                tw_sk_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet.pt()               )
+
+                tw_sk_2d[jetRidx][itm].fill_tree()
 
     outf.Write()
     outf.Close()
