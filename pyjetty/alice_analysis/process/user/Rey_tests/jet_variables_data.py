@@ -110,7 +110,7 @@ class process_ang_data(process_base.ProcessBase):
   def initialize_config(self):
 
     # Set configuration for analysis
-    self.jetR_list = [0.4,0.2]
+    self.jetR_list = [0.4,0.2,0.1,0.3,0.5]
 
     # SoftDrop configuration
     self.sd_zcut = 0.1
