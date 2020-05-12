@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-  Analysis class to read a ROOT TTree of track information
-  and do jet-finding, and save basic histograms.
+  Analysis class to read a ROOT TTree of track information and do jet-finding.
   
-  Based on code by James Mulligan (james.mulligan@berkeley.edu)
-  Modified by Ezra Lesser (elesser@berkeley.edu)
+  Most code adapted from rg analysis by James Mulligan (james.mulligan@berkeley.edu)
+  and angularity analysis Ezra Lesser (elesser@berkeley.edu)
+  Rey Cruz-Torres (reynier@lbl.gov)   
 """
 
 from __future__ import print_function

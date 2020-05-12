@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 """
-  Analysis class to read a ROOT TTree of MC track information
-  and do jet-finding, and save response histograms.
+  Analysis class to read a ROOT TTree of MC track information and do jet-finding
   
   Most code adapted from rg analysis by James Mulligan (james.mulligan@berkeley.edu)
-  Ezra Lesser (elesser@berkeley.edu)
+  and angularity analysis Ezra Lesser (elesser@berkeley.edu)
+  Rey Cruz-Torres (reynier@lbl.gov)
 """
 
 from __future__ import print_function
@@ -339,11 +339,11 @@ class process_ang_mc(process_base.ProcessBase):
         '''
         for jet_det in jets_det_selected:
           for jet_truth in jets_truth_selected_matched:
-            deltaR = jet_det.delta_R(jet_truth)
+            deltaR_det_truth = jet_det.delta_R(jet_truth)
             # Add a matching candidate to the list if it is within the geometrical cut
-            if deltaR < self.jet_matching_distance*jetR:
+            if deltaR_det_truth < self.jet_matching_distance*jetR:
               print('matched')
-        '''
+        '''      
 
     outf.Write()
     outf.Close()
