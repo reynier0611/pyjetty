@@ -291,15 +291,52 @@ class process_ang_mc(process_base.ProcessBase):
                 tw_det_sk_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet_det.pt()               )
                          
                 tw_det_sk_2d[jetRidx][itm].fill_tree()
-        '''  
+  
         # ---------------------------------------------------------------------------------------
-        # Utilize truth-level information before matching
+        # Loop through truth-level jets
         for jet_truth in jets_truth_selected:
-          # do stuff here
-          print('truth')
 
+          for constit in jet_truth.constituents():
+            theta_i_jet = jet_truth.delta_R(constit)
+
+            tw_truth[jetRidx].fill_branch("constit_over_jet_pt",constit.pt()/jet_truth.pt()  )
+            tw_truth[jetRidx].fill_branch("theta_constit_jet"  ,theta_i_jet                  )
+            tw_truth[jetRidx].fill_branch("n_constituents"     ,len(jet_truth.constituents()))
+            tw_truth[jetRidx].fill_branch("jet_pt"             ,jet_truth.pt()               )
+
+            tw_truth[jetRidx].fill_tree()
+
+          # Soft-drop groomed jet
+          for itm in range(len(self.sd_beta_par)):
+            sd_jet_truth = (sd_list[itm]).result(jet_truth)
+
+            for constit in sd_jet_truth.constituents():
+              sd_theta_i_jet = jet_truth.delta_R(constit)
+
+              tw_truth_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet_truth.pt()     )
+              tw_truth_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sd_theta_i_jet                  )
+              tw_truth_sd_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sd_jet_truth.constituents()))
+              tw_truth_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet_truth.pt()                  )
+
+              tw_truth_sd_2d[jetRidx][itm].fill_tree()
+
+            # 'Soft-kept' stuff
+            sk_idx = softkeep(jet_truth,sd_jet_truth) # List with indices of hadrons that were groomed away
+            for constit in jet_truth.constituents():
+              if(constit.user_index() in sk_idx):
+                sk_theta_i_jet = jet_truth.delta_R(constit)
+
+                tw_truth_sk_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet_truth.pt()  )
+                tw_truth_sk_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sk_theta_i_jet               )
+                tw_truth_sk_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sk_idx)                  )
+                tw_truth_sk_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet_truth.pt()               )
+
+                tw_truth_sk_2d[jetRidx][itm].fill_tree()
+
+        # ---------------------------------------------------------------------------------------
         # Loop through jets and set jet matching candidates for each jet in user_info     
         # Adapted from function 'set_matching_candidates' in 'process/base/process_base.py'
+        '''
         for jet_det in jets_det_selected:
           for jet_truth in jets_truth_selected_matched:
             deltaR = jet_det.delta_R(jet_truth)
@@ -307,6 +344,7 @@ class process_ang_mc(process_base.ProcessBase):
             if deltaR < self.jet_matching_distance*jetR:
               print('matched')
         '''
+
     outf.Write()
     outf.Close()
 
