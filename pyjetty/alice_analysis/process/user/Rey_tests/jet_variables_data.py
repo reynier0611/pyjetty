@@ -113,9 +113,8 @@ class process_ang_data(process_base.ProcessBase):
     self.jetR_list = [0.4,0.2,0.1,0.3,0.5]
 
     # SoftDrop configuration
-    self.sd_zcut = 0.1
-    self.sd_beta = 0
-    self.sd_beta_par = [0,0.5,1]
+    self.sd_zcut = [0.05,0.1,0.2]
+    self.sd_beta_par = [0,1]
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
   #---------------------------------------------------------------
@@ -130,21 +129,28 @@ class process_ang_data(process_base.ProcessBase):
 
     tw = []
     tw_sd_2d = []
+    tw_sd_3d = []
     tw_sd = []
     tw_sk_2d = []
+    tw_sk_3d = []
     tw_sk = []
 
     for njetR in range(len(self.jetR_list)):
       tw.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}'.format(self.jetR_list[njetR]),'Tree_R{}'.format(self.jetR_list[njetR])))) 
 
       # Tree to store results with softdrop
-      for itm in range(len(self.sd_beta_par)):
-        tw_sd.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]),'Tree_R{}_sd_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]))))
-        tw_sk.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sk_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]),'Tree_R{}_sk_beta_{}'.format(self.jetR_list[njetR],self.sd_beta_par[itm]))))
-      tw_sd_2d.append(tw_sd)
-      tw_sk_2d.append(tw_sk)
-      tw_sd = []
-      tw_sk = []
+      for itm_z in range(len(self.sd_zcut)):
+        for itm_b in range(len(self.sd_beta_par)):
+          tw_sd.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sd_z_{}_beta_{}'.format(self.jetR_list[njetR],self.sd_zcut[itm_z],self.sd_beta_par[itm_b]),'Tree_R{}_sd_z_{}_beta_{}'.format(self.jetR_list[njetR],self.sd_zcut[itm_z],self.sd_beta_par[itm_b]))))
+          tw_sk.append(treewriter.RTreeWriter(tree=ROOT.TTree('Tree_R{}_sk_z_{}_beta_{}'.format(self.jetR_list[njetR],self.sd_zcut[itm_z],self.sd_beta_par[itm_b]),'Tree_R{}_sk_z_{}_beta_{}'.format(self.jetR_list[njetR],self.sd_zcut[itm_z],self.sd_beta_par[itm_b]))))
+        tw_sd_2d.append(tw_sd)
+        tw_sk_2d.append(tw_sk)
+        tw_sd = []
+        tw_sk = []
+      tw_sd_3d.append(tw_sd_2d)
+      tw_sk_3d.append(tw_sk_2d)
+      tw_sd_2d = []
+      tw_sk_2d = []
 
     # -----------------------------------------------------
     # Loop over jet radii list
@@ -160,12 +166,16 @@ class process_ang_data(process_base.ProcessBase):
       
       # Define SoftDrop settings
       sd_list = []
-      for sd_par in self.sd_beta_par:
-        sd_list.append(fjcontrib.SoftDrop(sd_par, self.sd_zcut, jetR))
+      sd_list_2d = []
+      for sd_z in self.sd_zcut:
+        for sd_par in self.sd_beta_par:
+          sd_list.append(fjcontrib.SoftDrop(sd_par,sd_z, jetR))
+        sd_list_2d.append(sd_list)
+        sd_list = []
 
-      for sd_itm in range(len(sd_list)):
-        #sd_list.append(fjcontrib.SoftDrop(sd_par, self.sd_zcut[sd_itm], jetR))
-        print('Rey -> test: SoftDrop groomer is: {}'.format(sd_list[sd_itm].description()));
+      for sd_z in self.sd_zcut:
+        for sd_itm in range(len(sd_list)):
+          print('SoftDrop groomer is: {}'.format(sd_list_2d[sd_z][sd_itm].description()));
 
       for fj_particles in self.df_fjparticles:
         # Do jet finding
@@ -194,31 +204,32 @@ class process_ang_data(process_base.ProcessBase):
             tw[jetRidx].fill_tree()
 
           # Soft-drop groomed jet
-          for itm in range(len(self.sd_beta_par)):
-            sd_jet = (sd_list[itm]).result(jet)
-
-            for constit in sd_jet.constituents(): 
-              sd_theta_i_jet = float(deltaR(constit,jet))
-
-              tw_sd_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()     )
-              tw_sd_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sd_theta_i_jet            )
-              tw_sd_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sd_jet.constituents()))
-              tw_sd_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet.pt()                  )
-
-              tw_sd_2d[jetRidx][itm].fill_tree()
-
-            # 'Soft-kept' stuff
-            sk_idx = softkeep(jet,sd_jet) # List with indices of hadrons that were groomed away
-            for constit in jet.constituents():
-              if(constit.user_index() in sk_idx):
-                sk_theta_i_jet = float(deltaR(constit,jet))
-
-                tw_sk_2d[jetRidx][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()  )
-                tw_sk_2d[jetRidx][itm].fill_branch("theta_constit_jet"  ,sk_theta_i_jet         )
-                tw_sk_2d[jetRidx][itm].fill_branch("n_constituents"     ,len(sk_idx)            )
-                tw_sk_2d[jetRidx][itm].fill_branch("jet_pt"             ,jet.pt()               )
-
-                tw_sk_2d[jetRidx][itm].fill_tree()
+          for itm_z in range(len(self.sd_zcut)):
+            for itm in range(len(self.sd_beta_par)):
+              sd_jet = (sd_list_2d[itm_z][itm]).result(jet)
+           
+              for constit in sd_jet.constituents(): 
+                sd_theta_i_jet = float(deltaR(constit,jet))
+           
+                tw_sd_3d[jetRidx][itm_z][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()     )
+                tw_sd_3d[jetRidx][itm_z][itm].fill_branch("theta_constit_jet"  ,sd_theta_i_jet            )
+                tw_sd_3d[jetRidx][itm_z][itm].fill_branch("n_constituents"     ,len(sd_jet.constituents()))
+                tw_sd_3d[jetRidx][itm_z][itm].fill_branch("jet_pt"             ,jet.pt()                  )
+           
+                tw_sd_3d[jetRidx][itm_z][itm].fill_tree()
+           
+              # 'Soft-kept' stuff
+              sk_idx = softkeep(jet,sd_jet) # List with indices of hadrons that were groomed away
+              for constit in jet.constituents():
+                if(constit.user_index() in sk_idx):
+                  sk_theta_i_jet = float(deltaR(constit,jet))
+           
+                  tw_sk_3d[jetRidx][itm_z][itm].fill_branch("constit_over_jet_pt",constit.pt()/jet.pt()  )
+                  tw_sk_3d[jetRidx][itm_z][itm].fill_branch("theta_constit_jet"  ,sk_theta_i_jet         )
+                  tw_sk_3d[jetRidx][itm_z][itm].fill_branch("n_constituents"     ,len(sk_idx)            )
+                  tw_sk_3d[jetRidx][itm_z][itm].fill_branch("jet_pt"             ,jet.pt()               )
+           
+                  tw_sk_3d[jetRidx][itm_z][itm].fill_tree()
 
     outf.Write()
     outf.Close()
