@@ -82,8 +82,8 @@ systematics_list:
 
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/rey/191517/LHC17pq/448/20-06-2020/448_20200619-0610/unmerged/combined.root'
-main_response: '/rstorage/alice/AnalysisResults/rey/191619/LHC18b8/449/combined.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/rey/191619/LHC18b8/449/combined.root'
+main_response: '/rstorage/alice/AnalysisResults/rey/191619/Stage1/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/rey/191619/Stage1/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
