@@ -70,8 +70,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
       
         self.plot_final_result_overlay(i_config, jetR, overlay_list)
 
-        self.plot_NPcorrections(i_config, jetR, overlay_list)
-  
   #----------------------------------------------------------------------
   # This function is called once after all subconfigurations and jetR have been looped over
   #----------------------------------------------------------------------
@@ -236,13 +234,13 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     
     xtitle = getattr(self, 'xtitle')
     ytitle = getattr(self, 'ytitle')
-    color = 600-6
+    color = 1
     
     # Get histograms
     name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
     h = getattr(self, name)
     h.SetName(name)
-    h.SetMarkerSize(1.5)
+    h.SetMarkerSize(1.3)
     h.SetMarkerStyle(20)
     h.SetMarkerColor(color)
     h.SetLineStyle(1)
@@ -261,13 +259,11 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     n_obs_bins_truth = self.n_bins_truth(obs_label)
     truth_bin_array = self.truth_bin_array(obs_label)
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
-    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.SetNdivisions(108)
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(3*h.GetMaximum())
-    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
-      myBlankHisto.SetMaximum(1.7*h.GetMaximum())
+    myBlankHisto.SetMaximum(3*h.GetMaximum()) 
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
@@ -278,9 +274,9 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
         hPythia.SetFillStyle(0)
         hPythia.SetMarkerSize(1.5)
         hPythia.SetMarkerStyle(21)
-        hPythia.SetMarkerColor(1)
-        hPythia.SetLineColor(1)
-        hPythia.SetLineWidth(1)
+        hPythia.SetMarkerColor(62)
+        hPythia.SetLineColor(62)
+        hPythia.SetLineWidth(2)
         hPythia.Draw('E2 same')
       else:
         print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
@@ -497,7 +493,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
-        myBlankHisto.SetNdivisions(505)
+        myBlankHisto.SetNdivisions(108)
         myBlankHisto.GetXaxis().SetTitleSize(0.085)
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
@@ -537,7 +533,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
-          myBlankHisto2.GetYaxis().SetNdivisions(505)
+          myBlankHisto2.GetYaxis().SetNdivisions(108)
           myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
           myBlankHisto2.Draw()
         
@@ -651,128 +647,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
 
     output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
-    if not os.path.exists(output_dir):
-      os.mkdir(output_dir)
-    outputFilename = os.path.join(output_dir, name)
-    c.SaveAs(outputFilename)
-    c.Close()
-
-  #----------------------------------------------------------------------
-  def plot_NPcorrections(self, i_config, jetR, overlay_list):
-  
-    # Loop through pt slices, and plot NP correction for each 1D observable
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
-      
-      self.plot_NPcorrection_overlay(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth)
-
-  #----------------------------------------------------------------------
-  def plot_NPcorrection_overlay(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth):
-    
-    name = 'cResult_NPcorrection_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
-    c = ROOT.TCanvas(name, name, 600, 450)
-    c.Draw()
-    c.cd()
-    pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
-    pad1.SetLeftMargin(0.2)
-    pad1.SetTopMargin(0.07)
-    pad1.SetRightMargin(0.04)
-    pad1.SetBottomMargin(0.13)
-    pad1.Draw()
-    pad1.cd()
-    
-    pad1.cd()
-    myLegend = ROOT.TLegend(0.66,0.65,0.8,0.85)
-    self.utils.setup_legend(myLegend,0.035)
-    
-    # Retrieve histograms for each observable setting
-    for i, subconfig_name in enumerate(self.obs_subconfig_list):
-    
-      if subconfig_name not in overlay_list:
-        continue
-
-      obs_setting = self.obs_settings[i]
-      grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-      
-      if subconfig_name == overlay_list[0]:
-        marker = 20
-        color = 600-6
-      if subconfig_name == overlay_list[1]:
-        marker = 21
-        color = 632-4
-      if i > 1 and subconfig_name == overlay_list[2]:
-        marker = 33
-        color = 416-2
-
-      attr_name = 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth)
-      if hasattr(self, attr_name):
-        h = getattr(self, attr_name)
-      else:
-        return
-        
-      h.SetMarkerSize(1.5)
-      h.SetMarkerStyle(marker)
-      h.SetMarkerColor(color)
-      h.SetLineStyle(1)
-      h.SetLineWidth(2)
-      h.SetLineColor(color)
-      
-      if subconfig_name == overlay_list[0]:
-      
-        xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
-        xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
-        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
-        myBlankHisto.SetNdivisions(505)
-        myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
-        myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-        myBlankHisto.SetYTitle('Correction')
-        myBlankHisto.SetMaximum(2*h.GetMaximum())
-        myBlankHisto.SetMinimum(0.)
-        myBlankHisto.Draw("E")
-        
-        line = ROOT.TLine(0,1,xmax,1)
-        line.SetLineColor(920+2)
-        line.SetLineStyle(2)
-        line.Draw()
-      
-      h.DrawCopy('PE X0 same')
-      
-      subobs_label = self.utils.formatted_subobs_label(self.observable)
-      text = ''
-      if subobs_label:
-        text += '{} = {}'.format(subobs_label, obs_setting)
-      if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting)
-      myLegend.AddEntry(h, '{}'.format(text), 'pe')
-
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(0.25, 0.87, text)
-    
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.81, text)
-    
-    text_latex = ROOT.TLatex()
-    text_latex.SetNDC()
-    text = 'PYTHIA8 Monash2013'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.75, text)
-    
-    text = '#it{R} = ' + str(jetR) + '   | #eta_{jet}| < 0.5'
-    text_latex.DrawLatex(0.25, 0.69, text)
-    
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.SetTextSize(0.045)
-    text_latex.DrawLatex(0.25, 0.63, text)
-    
-    myLegend.Draw()
-    
-    name = 'hNPcorrection_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
-    output_dir = getattr(self, 'output_dir_final_results') + '/NPcorrection'
     if not os.path.exists(output_dir):
       os.mkdir(output_dir)
     outputFilename = os.path.join(output_dir, name)
