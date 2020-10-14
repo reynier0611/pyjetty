@@ -48,18 +48,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     # Theory comparisons
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
-      
-    if 'fNLL' in config:
-      self.fNLL = config['fNLL']
-    else:
-      self.fNLL = False
-
-    if 'fNPcorrection_numerator' in config and 'fNPcorrection_denominator' in config:
-      self.NPcorrection = True
-      self.fNPcorrection_numerator = config['fNPcorrection_numerator']
-      self.fNPcorrection_denominator = config['fNPcorrection_denominator']
-    else:
-      self.NPcorrection = False
 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -68,19 +56,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     print('Plotting each individual result...')
   
     # Plot final result for each 1D substructure distribution (with PYTHIA)
-    self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)
-    
-    if self.observable == 'theta_g' or self.observable == 'zg':
-    
-      if 'sd' in grooming_setting:
-
-        # Construct NP correction, and store as an attribute
-        if self.NPcorrection:
-          self.construct_NPcorrections(jetR, obs_label)
-      
-        # Construct TGraph of NLL predictions
-        if self.fNLL:
-          self.construct_nll_tgraphs(jetR, obs_label, obs_setting, grooming_setting)
+    self.plot_final_result(jetR, obs_label, obs_setting, grooming_setting)         
   
   #---------------------------------------------------------------
   # This function is called once after all subconfigurations have been looped over, for each R
@@ -221,7 +197,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
       name = 'h_tagging_fraction_R{}_{}'.format(jetR, obs_label)
       h_tagging = ROOT.TH1D(name, name, len(self.pt_bins_reported) - 1, array('d', self.pt_bins_reported))
 
-    # Loop through pt slices, and plot final result for each 1D theta_g distribution
+    # Loop through pt slices, and plot final result for each 1D observable distribution
     for bin in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[bin]
       max_pt_truth = self.pt_bins_reported[bin+1]
@@ -433,94 +409,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     return h
 
   #----------------------------------------------------------------------
-  def construct_NPcorrections(self, jetR, obs_label):
-    
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
-  
-      self.get_NPcorrection(jetR, obs_label, min_pt_truth, max_pt_truth)
-
-  #----------------------------------------------------------------------
-  def get_NPcorrection(self, jetR, obs_label, min_pt_truth, max_pt_truth):
-  
-    fNumerator = ROOT.TFile(self.fNPcorrection_numerator, 'READ')
-    fDenominator = ROOT.TFile(self.fNPcorrection_denominator, 'READ')
-    hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label[-1], int(min_pt_truth), int(max_pt_truth))
-
-    hNumerator = fNumerator.Get(hname)
-    if not hNumerator:
-      print('NP prediction does not exist for {}'.format(obs_label))
-      return
-    hNumerator.SetDirectory(0)
-    n_jets_inclusive = hNumerator.Integral(0, hNumerator.GetNbinsX()+1)
-    n_jets_tagged = hNumerator.Integral(hNumerator.FindBin(self.truth_bin_array(obs_label)[0]), hNumerator.GetNbinsX())
-    fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-    hNumerator.Scale(1./n_jets_inclusive, 'width')
-      
-    hDenominator = fDenominator.Get(hname)
-    hDenominator.SetDirectory(0)
-    n_jets_inclusive = hDenominator.Integral(0, hDenominator.GetNbinsX()+1)
-    n_jets_tagged = hDenominator.Integral(hDenominator.FindBin(self.truth_bin_array(obs_label)[0]), hDenominator.GetNbinsX())
-    fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
-    hDenominator.Scale(1./n_jets_inclusive, 'width')
-        
-    hNumerator.Divide(hDenominator)
-    hNumerator.SetName('hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-    setattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth), hNumerator)
-
-  #----------------------------------------------------------------------
-  def construct_nll_tgraphs(self, jetR, obs_label, obs_setting, grooming_setting):
-    
-    for bin in range(0, len(self.pt_bins_reported) - 1):
-      min_pt_truth = self.pt_bins_reported[bin]
-      max_pt_truth = self.pt_bins_reported[bin+1]
-      
-      self.get_nll_tgraph(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth)
-
-  #----------------------------------------------------------------------
-  def get_nll_tgraph(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth):
-
-    n_bins_truth = self.n_bins_truth(obs_label)
-    truth_bin_array = self.truth_bin_array(obs_label)
-    
-    key, value = list(grooming_setting.items())[0]
-    beta = value[1]
-    if self.observable == 'theta_g':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/Rg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-    if self.observable == 'zg':
-      path_txt = '/Users/jamesmulligan/Analysis_theta_g/NLL/zg_value/beta{}/{}_{}.dat'.format(beta, int(min_pt_truth), int(max_pt_truth))
-    
-    if not os.path.exists(path_txt):
-      print('NLL prediction does not exist for {}'.format(obs_label))
-      return
-    filename = open(path_txt, 'r')
-
-    x_list = []
-    center_list = []
-    low_list = []
-    up_list = []
-    for line in filename.readlines():
-      line = line.rstrip('\n')
-      
-      row = line.split(' ')
-      x_list.append(float(row[0]))
-      low_list.append(float(row[1]))
-      center_list.append(float(row[2]))
-      up_list.append(float(row[3]))
-
-    #x = array('d', x_list)
-    x = np.array(x_list)
-    x_err = np.zeros(n_bins_truth)
-    center = np.array(center_list)
-    low = np.subtract(center, np.array(low_list))
-    up = np.subtract(np.array(up_list), center)
-    
-    g = ROOT.TGraphAsymmErrors(n_bins_truth, x, center, x_err, x_err, low, up)
-    g.SetName('tgraph_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-    setattr(self, 'tgraph_NLL_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth), g)
-
-  #----------------------------------------------------------------------
   def plot_final_result_overlay(self, i_config, jetR, overlay_list):
     print('Plotting overlay of {}'.format(overlay_list))
 
@@ -531,9 +419,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
 
       # Plot PYTHIA
       self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=True, plot_ratio = True)
-
-      # Plot NLL
-      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_nll = True, plot_ratio = False)
 
   #----------------------------------------------------------------------
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
@@ -675,29 +560,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
           hPythia.SetLineColor(color)
           hPythia.SetLineColorAlpha(color, 0.5)
           hPythia.SetLineWidth(4)
-
-      if plot_nll:
-        
-        # Get parton-level prediction
-        attr_name = 'tgraph_NLL_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth)
-        if hasattr(self, attr_name):
-          g = getattr(self, attr_name)
-        else:
-          return
-        
-        # Get correction
-        apply_nll_correction = False
-        if apply_nll_correction:
-          h_correction = getattr(self, 'hNPcorrection_{}_{}_{}-{}'.format(self.observable, obs_label, min_pt_truth, max_pt_truth))
-        
-          # Apply correction
-          self.utils.multiply_tgraph(g, h_correction)
-        
-        g.SetLineColor(color)
-        g.SetLineColorAlpha(color, 0.5)
-        g.SetLineWidth(4)
-        g.SetFillColor(color)
-        g.SetFillColorAlpha(color, 0.5)
       
       if plot_ratio:
         hRatioSys = h_sys.Clone()
@@ -709,28 +571,11 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
           hRatioSys.SetFillColorAlpha(color, 0.3)
           hRatioSys.SetFillStyle(1001)
           hRatioSys.SetLineWidth(0)
-        elif plot_nll:
-          gRatioSys = g.Clone()
-          gRatioSys.SetName('{}_{}_Ratio'.format(obs_label, g.GetName()))
-          self.utils.divide_tgraph(hRatioSys, gRatioSys, combine_errors=True)
-          gRatioSys.SetLineColor(0)
-          gRatioSys.SetFillColor(color)
-          gRatioSys.SetFillColorAlpha(color, 0.3)
-          gRatioSys.SetFillStyle(1001)
-          gRatioSys.SetLineWidth(0)
           
         hRatioStat = h.Clone()
         hRatioStat.SetName('{}_Ratio'.format(h.GetName()))
         if plot_pythia:
           hRatioStat.Divide(hPythia)
-        elif plot_nll:
-          self.utils.divide_tgraph(hRatioStat, g, combine_errors=False)
-        hRatioStat.SetMarkerSize(1.5)
-        hRatioStat.SetMarkerStyle(marker)
-        hRatioStat.SetMarkerColor(color)
-        hRatioStat.SetLineStyle(1)
-        hRatioStat.SetLineWidth(2)
-        hRatioStat.SetLineColor(color)
 
       pad1.cd()
       
@@ -741,9 +586,6 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
         else:
           hPythia.DrawCopy('L hist same')
           
-      if plot_nll:
-        g.Draw('L3 same')
-
       h_sys.DrawCopy('E2 same')
       h.DrawCopy('PE X0 same')
       
@@ -751,8 +593,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
         pad2.cd()
         if plot_pythia:
           hRatioSys.DrawCopy('E2 same')
-        elif plot_nll:
-          gRatioSys.Draw('L3 same')
+       
         hRatioStat.DrawCopy('PE X0 same')
         
       subobs_label = self.utils.formatted_subobs_label(self.observable)
@@ -766,9 +607,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
-      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash 2013', 'l')
-    if plot_nll:
-      myLegend.AddEntry(g, 'NLL', 'l')
+      myLegend.AddEntry(hPythia, 'PYTHIA8 Monash 2013', 'l') 
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -810,8 +649,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
-    if plot_nll:
-      name = 'h_{}_R{}_{}-{}_NLL_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
+
     output_dir = getattr(self, 'output_dir_final_results') + '/all_results'
     if not os.path.exists(output_dir):
       os.mkdir(output_dir)
