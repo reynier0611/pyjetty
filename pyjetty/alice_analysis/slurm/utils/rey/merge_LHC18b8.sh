@@ -28,7 +28,7 @@ module list
 
 # Merge all output files from each pt-hat bin
 FILE_DIR_BASE=/rstorage/alice/AnalysisResults/rey/$JOB_ID
-FILES=$( find ${FILE_DIR_BASE}/LHC18b8/449/child_*/TrainOutput/*/${BIN} -name "*.root" )
+FILES=$( find ${FILE_DIR_BASE}/LHC18b8/449/child_*/TrainOutput/${BIN}/*/*/ -name "*.root" )
 
 OUT_DIR_BASE=/rstorage/alice/AnalysisResults/rey/$JOB_ID
 mkdir -p ${OUT_DIR_BASE}/Stage0/${BIN}
