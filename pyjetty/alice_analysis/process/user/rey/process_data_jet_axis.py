@@ -82,8 +82,6 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
     reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
     jet_wta = reclusterer_wta.result(jet)
 
-    #jet_groomed = jet_groomed_lund.pair()
-
     if obs_setting == 'Standard_SD':
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
@@ -91,7 +89,6 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
     if obs_setting == 'Standard_WTA':
-      #if grooming_setting == self.grooming_settings[0]:
       deltaR = jet.delta_R(jet_wta)
       getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
