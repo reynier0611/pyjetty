@@ -65,7 +65,7 @@ roounfold_path: '/home/rey/RooUnfold/RooUnfold/libRooUnfold.so'
 analysis_observable: 'energy_drop'
 do_unfolding: True
 force_rebin: False
-do_systematics: True
+do_systematics: False
 do_plot_final_result: False
 do_plot_performance: True
 figure_approval_status: 'Work in Progress'
