@@ -45,6 +45,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       return '#Delta #it{R}_{axis}'
     elif observable == 'ang':
       return '#it{#beta}'
+    elif observable == 'energy_drop':
+      return '#Delta_{E}'
 
     # Else observable not implemented
     return None
@@ -73,6 +75,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       #return math.pow(content, 1 + prior_variation_parameter)
       # Option 2: linear scaling of distributions
       return prior_variation_parameter * (2 * obs_true - 1) + 1
+    elif self.observable == 'energy_drop':
+      return (1 + obs_true)
 
     # Else observable has not been implemented
     raise ValueError('No observable is defined in prior_scale_factor_obs()!')
