@@ -78,8 +78,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     #self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
     #                   ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
     #                   ROOT.kOrange-3]
-    self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kBlue-6, 1]
-                       
+    #self.ColorArray = [ROOT.kViolet-8, ROOT.kAzure-4, ROOT.kTeal-8, ROOT.kOrange+6, ROOT.kOrange-3, ROOT.kRed-7, ROOT.kPink+1, ROOT.kCyan-2, ROOT.kGray, ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kBlue-6, 1]
+    self.ColorArray = [1,2,62,8,93,6,50,4,210]
+                  
     self.MarkerArray = [20, 21, 22, 23, 34, 33, 24, 25, 26, 32, 27, 28, 42]
     self.OpenMarkerArray = [24, 25, 26, 32, 27, 28, 42]
     
