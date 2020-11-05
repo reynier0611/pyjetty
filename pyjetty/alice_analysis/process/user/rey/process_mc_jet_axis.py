@@ -75,7 +75,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       self.create_thn(name, title, dim, nbins, min, max)
 
       name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-      h = ROOT.TH2F(name, name, 20, 0, 200, 100, 0, 1.0)
+      h = ROOT.TH2F(name, name, 30, 0, 300, 100, 0, 1.0)
       h.GetXaxis().SetTitle('p_{T,ch jet}')
       h.GetYaxis().SetTitle('#DeltaR')
       setattr(self, name, h)
@@ -130,7 +130,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
     jet_truth_wta = reclusterer_wta.result(jet_truth)
 
     # Compute jet axis differences
-    if obs_setting == 'Standard_SD':
+    if 'Standard_SD' in obs_setting:
         jet_det_groomed = jet_det_groomed_lund.pair()
         jet_truth_groomed = jet_truth_groomed_lund.pair()
         deltaR_det = jet_det.delta_R(jet_det_groomed)
@@ -138,7 +138,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
     elif obs_setting == 'Standard_WTA':
         deltaR_det = jet_det.delta_R(jet_det_wta)
         deltaR_truth = jet_truth.delta_R(jet_truth_wta)
-    elif obs_setting == 'WTA_SD':
+    elif 'WTA_SD' in obs_setting:
         jet_det_groomed = jet_det_groomed_lund.pair()
         jet_truth_groomed = jet_truth_groomed_lund.pair()
         deltaR_det = jet_det_groomed.delta_R(jet_det_wta)
