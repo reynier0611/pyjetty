@@ -97,12 +97,12 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
     jet_wta = reclusterer_wta.result(jet)
 
     # Compute jet axis differences
-    if obs_setting == 'Standard_SD':
+    if 'Standard_SD' in obs_setting:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet.delta_R(jet_groomed)
     elif obs_setting == 'Standard_WTA':
         deltaR = jet.delta_R(jet_wta)
-    elif obs_setting == 'WTA_SD':
+    elif 'WTA_SD' in obs_setting:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet_groomed.delta_R(jet_wta)
 
