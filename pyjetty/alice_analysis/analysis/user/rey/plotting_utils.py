@@ -493,7 +493,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plot_obs_projections(self, jetR, obs_label, obs_setting, grooming_setting, xtitle, pt_bins):
-    return
+    
     if not self.fData:
       return
       
@@ -672,7 +672,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     self.scale_by_integral(hObs_det)
     hObs_det.Rebin(rebin_val_mcdet)
     hObs_det.Scale(1., 'width')
-    if 'sd' in grooming_setting:
+    if grooming_setting and 'sd' in grooming_setting:
       hObs_det.GetXaxis().SetRange(0, hObs_det.GetNbinsX())
 
     # Get histogram of observable at MC-truth from RM
@@ -684,7 +684,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.scale_by_integral(hObs_truth)
       hObs_truth.Rebin(rebin_val_mctruth)
       hObs_truth.Scale(1., 'width')
-      if 'sd' in grooming_setting:
+      if grooming_setting and 'sd' in grooming_setting:
         hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
       
     # Get histogram of theta_g in data, for given pt-det cut
@@ -696,7 +696,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       self.scale_by_integral(hObs_data)
       hObs_data.Rebin(rebin_val_data)
       hObs_data.Scale(1., 'width')
-      if 'sd' in grooming_setting:
+      if grooming_setting and 'sd' in grooming_setting:
         hObs_data.GetXaxis().SetRange(0, hObs_data.GetNbinsX())
 
     # Draw histogram
