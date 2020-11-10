@@ -325,6 +325,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     # Plot various slices of the response matrix (from the THn)
     self.plot_RM_slices(jetR, obs_label, grooming_setting)
+    self.plot_RM_slices_finer_binning(jetR, obs_label, grooming_setting)
     
     # Plot the kinematic efficiency from the response THn, and save it as an attribute
     self.plot_kinematic_efficiency(jetR, obs_label, obs_setting, grooming_setting)
@@ -556,7 +557,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.35, 0.85, text)
 
     text_latex = ROOT.TLatex()
@@ -878,9 +879,30 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.plot_pt_response(jetR, obs_label, hResponse)
 
   #################################################################################################
+  # Plot various slices of the response matrix (from the THn) with finer binning
+  #################################################################################################
+  def plot_RM_slices_finer_binning(self, jetR, obs_label, grooming_setting):
+
+    # (pt-det, pt-true, obs-det, obs-true)
+    name_response = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
+    hResponse = getattr(self, name_response) 
+
+    # Fix pt-true, and plot the 2D observable response
+    n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
+    truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
+    for bin in range(1, n_pt_bins_truth-1):
+      min_pt_truth = truth_pt_bin_array[bin]
+      max_pt_truth = truth_pt_bin_array[bin+1]
+
+      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, '_finer_binning')
+
+    # Plot pt-response (summed over substructure observable)
+    self.plot_pt_response(jetR, obs_label, hResponse, '_finer_binning')
+
+  #################################################################################################
   # Plot 2D observable response for a fixed range of pt-truth
   #################################################################################################
-  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting):
+  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, extra_label=''):
 
     hResponse4D = hResponse.Clone()
     hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
@@ -902,17 +924,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     if grooming_setting and 'sd' in grooming_setting:
       hResponse_Obs_Normalized.SetMaximum(0.3)
 
-    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth)
+    text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth) + ' GeV/#it{c}'
 
     output_dir = getattr(self, 'output_dir_RM')
-    outf_name = '{}{}'.format(hResponse_Obs.GetName(), self.file_format)
+    outf_name = '{}{}{}'.format(hResponse_Obs.GetName(), extra_label, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True, text)
 
   #################################################################################################
   # Plot 2D pt response
   #################################################################################################
-  def plot_pt_response(self, jetR, obs_label, hResponse):
+  def plot_pt_response(self, jetR, obs_label, hResponse, extra_label=''):
 
     hResponse4D = hResponse.Clone()
     hResponse4D.SetName('{}_pt'.format(hResponse4D.GetName()))
@@ -930,7 +952,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
 
     output_dir = getattr(self, 'output_dir_RM')
-    outf_name = '{}{}'.format(hResponse_Obs.GetName(), self.file_format)
+    outf_name = '{}{}{}'.format(hResponse_Obs.GetName(), extra_label, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True)
 

@@ -252,23 +252,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histJER.SetMarkerSize(3)
     self.plot_hist(histJER, outputFilename, 'hist P')
 
-  #--------------------------------------------------------------- 
-  def plotRM_fineBinning(self, jetR, obs_label, xtitle):
-    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
-    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    hRM_4d = self.fMC.Get(name)
-
-    hRM_obs_v_obs = hRM_4d.Projection(2,3)
-    hRM_obs_v_obs.SetName('hResponse_finer_bins_obs_v_obs_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
-    outputFilename = os.path.join(self.output_dir, 'hResponse_finer_bins_obs_v_obs_R{}_{}.pdf'.format(self.remove_periods(jetR),obs_label))
-    self.plot_hist(hRM_obs_v_obs, outputFilename, 'colz',False,True)
-
-    hRM_pT_v_pT = hRM_4d.Projection(0,1)
-    hRM_pT_v_pT.SetName('hResponse_finer_bins_pT_v_pT_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
-    hRM_pT_v_pT.GetXaxis().SetRangeUser(0,140)
-    outputFilename = os.path.join(self.output_dir, 'hResponse_finer_bins_pT_v_pT_R{}_{}.pdf'.format(self.remove_periods(jetR),obs_label))
-    self.plot_hist(hRM_pT_v_pT, outputFilename, 'colz',False,True)
-
   #---------------------------------------------------------------
   def plot_jet_reco_efficiency(self, jetR, obs_label): 
     
