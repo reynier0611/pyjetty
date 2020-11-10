@@ -27,7 +27,7 @@ jet_axis:
     ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
     pt_bins_reported: [20, 40, 60, 80]
     plot_overlay_list:
-      - ['config1', 'config2', 'config3']
+      - ['config1', 'config2', 'config3', 'config4', 'config5']
       
   # RM binnings from processing:
   #   pt-truth: 10 GeV
@@ -37,7 +37,7 @@ jet_axis:
 
   config1:
     axis: 'Standard_WTA'
-    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300] 
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
     pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
     obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2]
@@ -47,7 +47,7 @@ jet_axis:
       0.4: 3
       
   config2:
-    axis: 'Standard_SD'
+    axis: 'Standard_SD_1'
     SoftDrop:
       zcut: 0.1
       beta: 0
@@ -61,7 +61,7 @@ jet_axis:
       0.4: 3
       
   config3:
-    axis: 'WTA_SD'
+    axis: 'WTA_SD_1'
     SoftDrop:
       zcut: 0.1
       beta: 0
@@ -72,7 +72,35 @@ jet_axis:
     obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
     reg_param:
-      0.4: 3 
+      0.4: 3
+
+  config4:
+    axis: 'Standard_SD_2'
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.1, 0.2] # 0.001
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.1, 0.2, 0.3, 0.4] # 0.001
+    obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.1, 0.2, 0.3, 0.4]
+    reg_param:
+      0.4: 3
+      
+  config5:
+    axis: 'WTA_SD_2'
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.08, 0.1, 0.15, 0.2]
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    obs_bins_det_sys_binning: [0., 0.006, 0.011, 0.016, 0.021, 0.026, 0.032, 0.04, 0.048, 0.06, 0.07, 0.08, 0.1, 0.15, 0.2, 0.3, 0.4]
+    reg_param:
+      0.4: 3
 
 ###############################################################################
 # Analysis parameters
@@ -100,9 +128,9 @@ systematics_list:
 #  - binning
 
 # Paths to processing output, to be used for unfolding
-main_data: '/rstorage/alice/AnalysisResults/rey/209383/AnalysisResultsFinal.root'
-main_response: '/rstorage/alice/AnalysisResults/rey/209384/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/rey/209384/AnalysisResultsFinal.root'
+main_data: '/rstorage/alice/AnalysisResults/rey/233406/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/rey/233726/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/rey/233726/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
