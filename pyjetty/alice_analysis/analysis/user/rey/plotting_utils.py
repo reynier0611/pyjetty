@@ -220,7 +220,6 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plotJER(self, jetR, obs_label): 
-    #return
     # (pt-det, pt-truth, theta_g-det, theta_g-truth)
     name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
     hRM_4d = self.fMC.Get(name)
@@ -252,7 +251,24 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     histJER.SetMarkerColor(2)
     histJER.SetMarkerSize(3)
     self.plot_hist(histJER, outputFilename, 'hist P')
-  
+
+  #--------------------------------------------------------------- 
+  def plotRM_fineBinning(self, jetR, obs_label, xtitle):
+    # (pt-det, pt-truth, theta_g-det, theta_g-truth)
+    name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+    hRM_4d = self.fMC.Get(name)
+
+    hRM_obs_v_obs = hRM_4d.Projection(2,3)
+    hRM_obs_v_obs.SetName('hResponse_finer_bins_obs_v_obs_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
+    outputFilename = os.path.join(self.output_dir, 'hResponse_finer_bins_obs_v_obs_R{}_{}.pdf'.format(self.remove_periods(jetR),obs_label))
+    self.plot_hist(hRM_obs_v_obs, outputFilename, 'colz',False,True)
+
+    hRM_pT_v_pT = hRM_4d.Projection(0,1)
+    hRM_pT_v_pT.SetName('hResponse_finer_bins_pT_v_pT_{}_R{}_{}_Proj'.format(self.observable, jetR, obs_label))
+    hRM_pT_v_pT.GetXaxis().SetRangeUser(0,140)
+    outputFilename = os.path.join(self.output_dir, 'hResponse_finer_bins_pT_v_pT_R{}_{}.pdf'.format(self.remove_periods(jetR),obs_label))
+    self.plot_hist(hRM_pT_v_pT, outputFilename, 'colz',False,True)
+
   #---------------------------------------------------------------
   def plot_jet_reco_efficiency(self, jetR, obs_label): 
     
@@ -369,11 +385,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins):
 
-    if self.observable == 'subjet_z' or self.observable == 'jet_axis':
+    if self.observable == 'subjet_z':
       return
     else:
       name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    
+ 
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
     c_residual.SetBottomMargin(0.2)
@@ -415,9 +431,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
   #---------------------------------------------------------------
   def plot_obs_residual_obs(self, jetR, obs_label, xtitle):
-    return
-    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
-    
+    name = 'hResidual_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix) 
+   
     c_residual = ROOT.TCanvas('c','c: hist',600,450)
     c_residual.cd()
     c_residual.SetBottomMargin(0.2)
@@ -427,12 +442,14 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.035)
-    
+
     # Loop through pt slices, and plot final residual for each 1D distribution
     min_pt = 80
     max_pt = 100
     if 'theta' in xtitle:
       obs_true_list = [0., 0.05, 0.1, 0.2, 0.5, 1.]
+    elif '#Delta R' in xtitle:
+      obs_true_list = [0.,jetR/8.,jetR/4.,jetR*3/8.,jetR/2.]
     else:
       obs_true_list = [0.2, 0.3, 0.4, 0.5]
     for i in range(0, len(obs_true_list) - 1):
@@ -442,7 +459,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hResidual = self.get_residual_proj(name, 'hResidual{}'.format(i), min_obs_truth, max_obs_truth, option='obs', min_pt=min_pt, max_pt=max_pt)
       hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
-      hResidual.SetLineColor(0)
+      hResidual.SetLineColor(self.ColorArray[i])
       if self.thermal:
         hResidual.SetMarkerStyle(self.OpenMarkerArray[i])
 
