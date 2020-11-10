@@ -154,6 +154,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plotRM_fineBinning(jetR, obs_label, self.xtitle)
         
         if grooming_setting and self.observable != 'jet_axis':
           self.plotting_utils.plot_lund_plane(jetR, obs_label, grooming_setting)
