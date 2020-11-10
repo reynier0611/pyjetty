@@ -60,9 +60,10 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
         grooming_label = ''
 
       name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, -1*jetR, jetR)
+      h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -1*jetR, jetR)
       h.GetXaxis().SetTitle('p_{T,truth}')
-      h.GetYaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+      h.GetYaxis().SetTitle('#DeltaR_{truth}')
+      h.GetZaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
       setattr(self, name, h)
 
       # Create THn of response for jet axis deltaR
