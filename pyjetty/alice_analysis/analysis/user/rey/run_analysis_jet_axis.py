@@ -186,7 +186,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   def plot_final_result(self, jetR, obs_label, obs_setting, grooming_setting):
     print('Plot final results for {}: R = {}, {}'.format(self.observable, jetR, obs_label)) 
-    print('******************************************************************************* {}',not bool(grooming_setting))
+    
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
     
@@ -441,8 +441,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.45,0.33,0.61,0.57)
-    self.utils.setup_legend(myLegend,0.05)
+    myLegend = ROOT.TLegend(0.3,0.25,0.61,0.57)
+    self.utils.setup_legend(myLegend,0.04)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
     ymax = self.get_maximum(name, overlay_list)
@@ -459,16 +459,28 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       if subconfig_name == overlay_list[0]:
         marker = 20
         marker_pythia = marker+4
-        color = 62
-      if subconfig_name == overlay_list[1]:
+        color = 1
+      elif subconfig_name == overlay_list[1]:
         marker = 21
         marker_pythia = marker+4
+        color = 62
+      elif subconfig_name == overlay_list[2]:
+        marker = 22
+        marker_pythia = marker+4
         color = 2
-      if i > 1 and subconfig_name == overlay_list[2]:
+      elif subconfig_name == overlay_list[3]:
+        marker = 23
+        marker_pythia = 32
+        color = 8
+      elif subconfig_name == overlay_list[4]:
         marker = 33
         marker_pythia = 27
-        color = 8
-            
+        color = 92
+      else:
+        marker = 29
+        marker_pythia = 30
+        color = 50
+
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       h = getattr(self, name)
       h.SetMarkerSize(1.5)
@@ -533,7 +545,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
-          myBlankHisto2.GetYaxis().SetNdivisions(108)
+          myBlankHisto2.GetYaxis().SetNdivisions(107)
           myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
           myBlankHisto2.Draw()
         
@@ -594,8 +606,16 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
-      if subobs_label:
+      if subobs_label == '#Delta #it{R}_{axis}':
+        if obs_setting == 'Standard_WTA':
+          text += '{} = {}'.format(subobs_label, 'Standard - WTA')
+        elif 'Standard_SD' in obs_setting:
+          text += '{} = {}'.format(subobs_label, 'Standard - ')
+        elif 'WTA_SD' in obs_setting:
+          text += '{} = {}'.format(subobs_label, 'WTA - ')
+      elif subobs_label:
         text += '{} = {}'.format(subobs_label, obs_setting)
+        
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
