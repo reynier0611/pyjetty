@@ -151,7 +151,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         obs_label = self.utils.obs_label(obs_setting, grooming_setting)
     
         self.plotting_utils.plot_obs_resolution(jetR, obs_label, self.xtitle, self.pt_bins_reported)
-        self.plotting_utils.plot_obs_residual_pt(jetR, obs_label, self.xtitle, self.pt_bins_reported)
+        self.plotting_utils.plot_obs_residual_pt(jetR, obs_label, self.xtitle, self.pt_bins_reported, obs_label, grooming_setting)
         self.plotting_utils.plot_obs_residual_obs(jetR, obs_label, self.xtitle)
         self.plotting_utils.plot_obs_projections(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)
         self.plotting_utils.plot_obs_truth(jetR, obs_label, obs_setting, grooming_setting, self.xtitle, self.pt_bins_reported)

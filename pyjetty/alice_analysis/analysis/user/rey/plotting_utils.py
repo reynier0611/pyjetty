@@ -366,7 +366,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     return histResolution
 
   #---------------------------------------------------------------
-  def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins):
+  def plot_obs_residual_pt(self, jetR, obs_label, xtitle, pt_bins, obs_setting, grooming_setting):
 
     if self.observable == 'subjet_z':
       return
@@ -382,7 +382,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
+    leg.SetLineColor(0)
     
+    max_val = 0
+
     # Loop through pt slices, and plot final residual for each 1D distribution
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
@@ -392,21 +395,49 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hResidual.SetMarkerStyle(self.MarkerArray[i])
       hResidual.SetMarkerColor(self.ColorArray[i])
       hResidual.SetLineColor(self.ColorArray[i])
-      
+  
       if i == 0:
-      
+        max_val = 2*hResidual.GetMaximum()
+
         hResidual.GetXaxis().SetTitleOffset(1.6);
         hResidual.GetYaxis().SetTitle('Probability density')
         hResidual.GetYaxis().SetRangeUser(0, 2.*hResidual.GetMaximum())
         hResidual.DrawCopy('P E')
         
       else:
-
         hResidual.DrawCopy('P E same')
     
       leg.AddEntry(hResidual, '#it{{p}}_{{T}}^{{gen}} = {}-{} GeV'.format(min_pt_truth, max_pt_truth), 'P')
 
     leg.Draw('same')
+
+    # ----------------
+    if self.is_pp:
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
+    text_latex = ROOT.TLatex()
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(-0.38, 0.93*max_val, text)
+
+    subobs_label = self.formatted_subobs_label(self.observable)
+
+    if subobs_label:
+      if obs_setting == 'Standard_WTA':
+        text_latex.DrawLatex(-0.38, 0.86*max_val,'{} = {}'.format(subobs_label,'Standard - WTA'))
+      elif 'Standard_SD' in obs_setting:
+        text_latex.DrawLatex(-0.38, 0.86*max_val,'{} = {}'.format(subobs_label,'Standard - Soft Drop'))
+      elif 'WTA_SD' in obs_setting:
+        text_latex.DrawLatex(-0.38, 0.86*max_val,'{} = {}'.format(subobs_label,'WTA - Soft Drop'))
+      else:
+        text_latex.DrawLatex(-0.38, 0.86*max_val,'{} = {}'.format(subobs_label,obs_setting))
+
+    text_latex.DrawLatex(-0.38, 0.79*max_val,'R = {}'.format(jetR))
+
+    if grooming_setting:
+      text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
+      text_latex.DrawLatex(-0.38, 0.72*max_val, text)
+    # ----------------
     
     outputFilename = os.path.join(self.output_dir, 'residual_pt/hResidual_R{}_{}.pdf'.format(self.remove_periods(jetR), obs_label))
     c_residual.SaveAs(outputFilename)
@@ -517,6 +548,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # Loop through pt slices, and plot:
     #   (a) MC-det and MC-truth 1D distributions, for fixed pt-truth
     #   (b) MC-det and data 1D distributions, for fixed pt-det
+    #   (c) MC-det, MC-truth, and data 1D distributions, for fixed pt-det
     for i in range(0, len(pt_bins) - 1):
       min_pt_truth = pt_bins[i]
       max_pt_truth = pt_bins[i+1]
@@ -596,8 +628,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
-
-    #text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
+ 
     text_latex.DrawLatex(0.3, 0.67, text)
     
     subobs_label = self.formatted_subobs_label(self.observable)
@@ -724,7 +755,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     leg.SetTextSize(0.04)
     
     hObs_det.GetYaxis().SetTitleOffset(1.5)
-    hObs_det.SetMaximum(2.3*hObs_det.GetMaximum())
+    hObs_det.SetMaximum(2.1*hObs_det.GetMaximum())
     hObs_det.SetMinimum(0.)
 
     hObs_det.Draw('hist')
@@ -773,12 +804,13 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       elif 'WTA_SD' in obs_setting:
         text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,'WTA - Soft Drop'))
       else:
-        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,obs_setting))
-      delta = 0.07
-      
+        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,obs_setting)) 
+
+    text_latex.DrawLatex(0.3, 0.61, 'R = {}'.format(jetR))      
+
     if grooming_setting:
       text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
-      text_latex.DrawLatex(0.3, 0.61-delta, text)
+      text_latex.DrawLatex(0.3, 0.55, text)
 
     output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)

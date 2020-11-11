@@ -295,7 +295,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
             'Unfolded_ratio', 'Unfolded_stat_uncert', 'Test_StatisticalClosure',
             'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter1)),
             'Test_ShapeClosure{}'.format(self.utils.remove_periods(self.shape_variation_parameter2)),
-            'Test_Refolding', 'Correlation_Coefficients']
+            'Test_Refolding', 'Correlation_Coefficients','RM_finer_binning']
     if self.thermal_model:
       dirs.append('Test_ThermalClosure')
       
@@ -951,7 +951,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     hResponse_Obs_Normalized = self.utils.normalize_response_matrix(hResponse_Obs)
 
-    output_dir = getattr(self, 'output_dir_RM')
+    output_dir = getattr(self, 'output_dir_RM'+extra_label)
     outf_name = '{}{}{}'.format(hResponse_Obs.GetName(), extra_label, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True)
