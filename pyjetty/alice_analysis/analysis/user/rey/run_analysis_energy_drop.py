@@ -118,6 +118,7 @@ class RunAnalysisEnergyDrop(run_analysis.RunAnalysis):
     self.create_output_subdir(output_dir_performance, 'residual_obs')
     self.create_output_subdir(output_dir_performance, 'mc_projections_det')
     self.create_output_subdir(output_dir_performance, 'mc_projections_truth')
+    self.create_output_subdir(output_dir_performance, 'mc_projections_both')
     self.create_output_subdir(output_dir_performance, 'truth')
     self.create_output_subdir(output_dir_performance, 'data')
     self.create_output_subdir(output_dir_performance, 'lund')

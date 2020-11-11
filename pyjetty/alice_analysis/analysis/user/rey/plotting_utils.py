@@ -523,6 +523,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       
       self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='truth')
       self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='det')
+      self.plot_obs_projection(hRM_obs, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth, option='both')
 
   #---------------------------------------------------------------
   def plot_obs_truth(self, jetR, obs_label, obs_setting, grooming_setting,
@@ -636,6 +637,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   #---------------------------------------------------------------
   # If option='truth', plot MC-truth and MC-det projections for fixed pt-true
   # If option='det', plot data and MC-det projections for fixed pt-det
+  # If option='both', plot data, MC-det, and MC-truth for fixed pt-det
   def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
 
     ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
@@ -658,7 +660,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       rebin_val_data = 5
       
     # Get RM, for a given pt cut
-    if option == 'det':
+    if option == 'det' or option == 'both':
       hRM.GetAxis(0).SetRangeUser(min_pt, max_pt)
     if option == 'truth':
       hRM.GetAxis(1).SetRangeUser(min_pt, max_pt)
@@ -668,7 +670,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hObs_det.SetName('hObs_det_{}'.format(obs_label))
     hObs_det.GetYaxis().SetTitle(ytitle)
     hObs_det.SetLineColor(2)
-    hObs_det.SetLineWidth(2)
+    hObs_det.SetLineWidth(3)
     self.scale_by_integral(hObs_det)
     hObs_det.Rebin(rebin_val_mcdet)
     hObs_det.Scale(1., 'width')
@@ -676,11 +678,12 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hObs_det.GetXaxis().SetRange(0, hObs_det.GetNbinsX())
 
     # Get histogram of observable at MC-truth from RM
-    if option == 'truth':
+    if option == 'truth' or option == 'both':
       hObs_truth = hRM.Projection(3)
       hObs_truth.SetName('hObs_truth_{}'.format(obs_label))
-      hObs_truth.SetLineColor(4)
-      hObs_truth.SetLineWidth(2)
+      hObs_truth.SetLineColor(62)
+      hObs_truth.SetLineWidth(3)
+      hObs_truth.SetLineStyle(2)
       self.scale_by_integral(hObs_truth)
       hObs_truth.Rebin(rebin_val_mctruth)
       hObs_truth.Scale(1., 'width')
@@ -688,10 +691,12 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
         hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
       
     # Get histogram of theta_g in data, for given pt-det cut
-    if option == 'det':
+    if option == 'det' or option == 'both':
       hObs_JetPt.GetXaxis().SetRangeUser(min_pt, max_pt)
       hObs_data = hObs_JetPt.ProjectionY()
-      hObs_data.SetMarkerStyle(21)
+      hObs_data.SetMarkerStyle(24)
+      hObs_data.SetMarkerColor(1)
+      hObs_data.SetLineColor(1)
       hObs_data.SetMarkerSize(1)
       self.scale_by_integral(hObs_data)
       hObs_data.Rebin(rebin_val_data)
@@ -711,22 +716,29 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myPad.Draw()
     myPad.cd()
     
-    leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
+    leg = ROOT.TLegend(0.7,0.7,0.85,0.85, "")
+    leg.SetLineColor(0);
     leg.SetFillColor(10)
     leg.SetBorderSize(0)
     leg.SetFillStyle(1)
     leg.SetTextSize(0.04)
     
     hObs_det.GetYaxis().SetTitleOffset(1.5)
-    hObs_det.SetMaximum(2.5*hObs_det.GetMaximum())
+    hObs_det.SetMaximum(2.3*hObs_det.GetMaximum())
     hObs_det.SetMinimum(0.)
 
     hObs_det.Draw('hist')
     leg.AddEntry(hObs_det, "MC det", "L")
+  
     if option == 'truth':
       hObs_truth.Draw('hist same')
       leg.AddEntry(hObs_truth, "MC truth", "L")
     elif option == 'det':
+      hObs_data.Draw('hist E same')
+      leg.AddEntry(hObs_data, "data", "PE")
+    elif option == 'both':
+      hObs_truth.Draw('hist same')
+      leg.AddEntry(hObs_truth, "MC truth", "L")
       hObs_data.Draw('hist E same')
       leg.AddEntry(hObs_data, "data", "PE")
 
@@ -746,18 +758,22 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     if option == 'truth':
       text = str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}'
-    elif option == 'det':
+    elif option == 'det' or option == 'both':
       text = str(min_pt) + ' < #it{p}_{T, ch jet}^{det} < ' + str(max_pt) + ' GeV/#it{c}'
     text_latex.DrawLatex(0.3, 0.73, text)
-
-    #text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
-    text_latex.DrawLatex(0.3, 0.67, text)
-    
+ 
     subobs_label = self.formatted_subobs_label(self.observable)
     delta = 0.
+
     if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.3, 0.61, text)
+      if obs_setting == 'Standard_WTA':
+        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,'Standard - WTA'))
+      elif 'Standard_SD' in obs_setting:
+        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,'Standard - Soft Drop'))
+      elif 'WTA_SD' in obs_setting:
+        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,'WTA - Soft Drop'))
+      else:
+        text_latex.DrawLatex(0.3, 0.67,'{} = {}'.format(subobs_label,obs_setting))
       delta = 0.07
       
     if grooming_setting:
