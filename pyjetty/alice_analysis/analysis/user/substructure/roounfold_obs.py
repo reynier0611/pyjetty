@@ -926,7 +926,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth) + ' GeV/#it{c}'
 
-    output_dir = getattr(self, 'output_dir_RM')
+    output_dir = getattr(self, 'output_dir_RM'+extra_label)
     outf_name = '{}{}{}'.format(hResponse_Obs.GetName(), extra_label, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
     self.utils.plot_hist(hResponse_Obs_Normalized, outf_name, 'colz', False, True, text)
