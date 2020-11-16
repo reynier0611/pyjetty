@@ -887,6 +887,24 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     name_response = getattr(self, 'name_thn_R{}_{}'.format(jetR, obs_label))
     hResponse = getattr(self, name_response) 
 
+    # ----------------
+    title = ''
+
+    if obs_label == 'Standard_WTA':
+      title = 'R = {}, Standard - WTA'.format(jetR)
+    elif 'Standard_SD' in obs_label:
+      title = 'R = {}, Standard - Soft Drop'.format(jetR)
+    elif 'WTA_SD' in obs_label:
+      title = 'R = {}, WTA - Soft Drop'.format(jetR)
+    else:
+      title = 'R = {}, '.format(jetR) + obs_label
+
+    if grooming_setting:
+      for key, value in grooming_setting.items():
+        if key == 'sd':
+          title += ' #it{{z}}_{{cut}} = {}, #it{{#beta}} = {}'.format(value[0], value[1])
+    # ----------------
+
     # Fix pt-true, and plot the 2D observable response
     n_pt_bins_truth = getattr(self, 'n_pt_bins_truth_{}'.format(obs_label))
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
@@ -894,7 +912,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       min_pt_truth = truth_pt_bin_array[bin]
       max_pt_truth = truth_pt_bin_array[bin+1]
 
-      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, '_finer_binning')
+      self.plot_obs_response(jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, '_finer_binning',title)
 
     # Plot pt-response (summed over substructure observable)
     self.plot_pt_response(jetR, obs_label, hResponse, '_finer_binning')
@@ -902,7 +920,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   #################################################################################################
   # Plot 2D observable response for a fixed range of pt-truth
   #################################################################################################
-  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, extra_label=''):
+  def plot_obs_response(self, jetR, obs_label, min_pt_truth, max_pt_truth, hResponse, grooming_setting, extra_label='',title=''):
 
     hResponse4D = hResponse.Clone()
     hResponse4D.SetName('{}_{}_{}'.format(hResponse4D.GetName(), min_pt_truth, max_pt_truth))
@@ -926,6 +944,12 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet}^{true} < ' + str(max_pt_truth) + ' GeV/#it{c}'
 
+    hResponse_Obs_Normalized.GetXaxis().SetNdivisions(107)
+    hResponse_Obs_Normalized.GetYaxis().SetNdivisions(107)
+
+    if title != '':
+      text = '#splitline{' + title + '}{' + text + '}'
+
     output_dir = getattr(self, 'output_dir_RM'+extra_label)
     outf_name = '{}{}{}'.format(hResponse_Obs.GetName(), extra_label, self.file_format)
     outf_name = os.path.join(output_dir, outf_name)
@@ -940,9 +964,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hResponse4D.SetName('{}_pt'.format(hResponse4D.GetName()))
 
     truth_pt_bin_array = getattr(self, 'truth_pt_bin_array_{}'.format(obs_label))
-    hResponse4D.GetAxis(1).SetRangeUser(truth_pt_bin_array[0], truth_pt_bin_array[-1])
-    
+    #hResponse4D.GetAxis(1).SetRangeUser(truth_pt_bin_array[0], truth_pt_bin_array[-1]) # I'd rather plot the x and y axes in the same range to show the diagonality
+
     det_pt_bin_array = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
+    hResponse4D.GetAxis(1).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
     hResponse4D.GetAxis(0).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
 
     hResponse_Obs = hResponse4D.Projection(1, 0)
