@@ -1,7 +1,7 @@
 #! /bin/bash
 #
 # Script to merge output ROOT files from all pt-hat bins together, in stages
-JOB_ID=209384
+JOB_ID=256453
 FILE_DIR=/rstorage/alice/AnalysisResults/rey/$JOB_ID
 OUTPUT_DIR=/rstorage/alice/AnalysisResults/rey/$JOB_ID
 

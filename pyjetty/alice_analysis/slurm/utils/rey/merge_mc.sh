@@ -9,7 +9,7 @@ OUTPUT_DIR="/rstorage/alice/AnalysisResults/$SUBDIR/$JOB_ID"
 NBINS=20
 for BIN in $(seq 1 $NBINS);
 do
-  FILES=$( find /rstorage/alice/AnalysisResults/$SUBDIR/$JOB_ID/LHC18b8/449/child_*/TrainOutput/$BIN/*/* -name "*.root" )
+  FILES=$( find /rstorage/alice/AnalysisResults/$SUBDIR/$JOB_ID/LHC18b8/520/child_*/TrainOutput/$BIN/*/* -name "*.root" )
 
   mkdir -p $OUTPUT_DIR/Stage1/$BIN
   # -T in below command ignores all trees
