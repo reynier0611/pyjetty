@@ -515,7 +515,7 @@ class AnalysisUtils(common_utils.CommonUtils):
       textFit = ROOT.TLatex()
       textFit.SetTextSize(0.04)
       textFit.SetNDC()
-      textFit.DrawLatex(0.3,0.8,text)
+      textFit.DrawLatex(0.2,0.8,text)
     
     c.SaveAs(outputFilename)
     c.Close()
