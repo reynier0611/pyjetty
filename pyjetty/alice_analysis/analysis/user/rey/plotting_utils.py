@@ -700,6 +700,8 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hObs_det = hRM.Projection(2)
     hObs_det.SetName('hObs_det_{}'.format(obs_label))
     hObs_det.GetYaxis().SetTitle(ytitle)
+    if option == 'both':
+      hObs_det.GetXaxis().SetTitle(xtitle)
     hObs_det.SetLineColor(2)
     hObs_det.SetLineWidth(3)
     self.scale_by_integral(hObs_det)
