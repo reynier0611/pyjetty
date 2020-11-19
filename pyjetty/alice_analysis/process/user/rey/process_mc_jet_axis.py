@@ -72,6 +72,11 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       nbins = [30, 30, 80, 40]
       min = [0., 0., 0., 0.]
       max = [150., 300., jetR, jetR]
+
+      if 'Standard_SD' in self.obs_settings[self.observable][i]:
+        max[2] *= 1./8.
+        max[3] *= 1./8.
+
       name = 'hResponse_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
       self.create_thn(name, title, dim, nbins, min, max)
 
@@ -100,12 +105,15 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
     if 'Standard_SD' in obs_setting:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet.delta_R(jet_groomed)
+        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR = -1.
     elif obs_setting == 'Standard_WTA':
         deltaR = jet.delta_R(jet_wta)
     elif 'WTA_SD' in obs_setting:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet_groomed.delta_R(jet_wta)
-
+        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR = -1.
     if grooming_setting:
       grooming_label = self.utils.grooming_label(grooming_setting)
     else:
@@ -136,6 +144,10 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
         jet_truth_groomed = jet_truth_groomed_lund.pair()
         deltaR_det = jet_det.delta_R(jet_det_groomed)
         deltaR_truth = jet_truth.delta_R(jet_truth_groomed)
+        #if jet_truth_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR_truth = -1.
+        #if jet_det_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR_det = -1.
     elif obs_setting == 'Standard_WTA':
         deltaR_det = jet_det.delta_R(jet_det_wta)
         deltaR_truth = jet_truth.delta_R(jet_truth_wta)
@@ -144,7 +156,11 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
         jet_truth_groomed = jet_truth_groomed_lund.pair()
         deltaR_det = jet_det_groomed.delta_R(jet_det_wta)
         deltaR_truth = jet_truth_groomed.delta_R(jet_truth_wta)
-  
+        #if jet_truth_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR_truth = -1.
+        #if jet_det_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR_det = -1.
+
     # Fill response
     self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                        deltaR_det, deltaR_truth, obs_label, R_max, prong_match = False)   

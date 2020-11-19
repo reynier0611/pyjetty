@@ -54,16 +54,21 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         else:
           grooming_label = ''
 
+        max_obs = jetR
+
+        if 'Standard_SD' in self.obs_settings[self.observable][i]:
+          max_obs *= 1./8.
+
         if self.is_pp:
           name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, max_obs)
           h.GetXaxis().SetTitle('p_{T,ch jet}')
           h.GetYaxis().SetTitle('#Delta R')
           setattr(self, name, h)
         else:
           for R_max in self.max_distance:
             name = 'h_{}_JetPt_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, max_obs)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#Delta R')
             setattr(self, name, h)
@@ -86,6 +91,8 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet.delta_R(jet_groomed)
+        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR = -1.
         getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
     if obs_setting == 'Standard_WTA':
@@ -96,6 +103,8 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet_groomed.delta_R(jet_wta)
+        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+        #  deltaR = -1.
         getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
 ##################################################################
