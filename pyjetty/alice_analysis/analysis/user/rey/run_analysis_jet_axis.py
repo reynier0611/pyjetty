@@ -442,7 +442,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.3,0.25,0.61,0.57)
+    myLegend = ROOT.TLegend(0.25,0.55,0.61,0.90)
     self.utils.setup_legend(myLegend,0.04)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
@@ -501,6 +501,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       if subconfig_name == overlay_list[0]:
 
         pad1.cd()
+        pad1.SetLogy()
         xtitle = getattr(self, 'xtitle')
         ytitle = getattr(self, 'ytitle')
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
@@ -511,10 +512,10 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(2*ymax)
+        myBlankHisto.SetMaximum(9*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
-          myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+          myBlankHisto.SetMinimum(6e-2) # Don't draw 0 on top panel 
           myBlankHisto.GetYaxis().SetTitleSize(0.075)
           myBlankHisto.GetYaxis().SetTitleOffset(1.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -547,7 +548,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(107)
-          myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+          myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.79)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -629,24 +630,26 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.07)
-    x = 0.25
-    y = 0.86
-    text = 'ALICE {}'.format(self.figure_approval_status)
-    text_latex.DrawLatex(x, y, text)
+    text_latex.SetTextSize(0.05)
     
-    text_latex.SetTextSize(0.055)
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.5,0.5, text)
+
+    x = 0.25
+    y = 0.22
+    
+    text_latex.SetTextSize(0.05)
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-    text_latex.DrawLatex(x, y-0.06, text)
+    text_latex.DrawLatex(x, y-0.00, text)
 
     text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(x, y-0.12, text)
+    text_latex.DrawLatex(x, y-0.06, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
-    text_latex.DrawLatex(x, y-0.18, text)
+    text_latex.DrawLatex(x, y-0.12, text)
     
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(x, y-0.24, text)
+    text_latex.DrawLatex(x, y-0.18, text)
     
     myLegend.Draw()
     

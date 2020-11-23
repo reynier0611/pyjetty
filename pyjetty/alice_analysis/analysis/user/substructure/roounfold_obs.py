@@ -158,10 +158,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
-          if 'sd' in grooming_setting:
-            det_obs_bin_array.insert(0, det_obs_bin_array[0] - 0.1)
+          if 'sd' in grooming_setting: 
+            det_obs_bin_array.insert(0, det_obs_bin_array[0] - 0.1*(det_obs_bin_array[-1]-det_obs_bin_array[0]))
             n_obs_bins_det += 1
-            truth_obs_bin_array.insert(0, truth_obs_bin_array[0] - 0.1)
+            truth_obs_bin_array.insert(0, truth_obs_bin_array[0] - 0.1*(truth_obs_bin_array[-1]-truth_obs_bin_array[0]))
             n_obs_bins_truth += 1
         
         setattr(self, 'n_bins_det_{}'.format(obs_label), n_obs_bins_det)
@@ -1418,7 +1418,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     pad1.Draw()
     pad1.cd()
 
-    h.SetLineColor(1)
+    h.SetLineColor(62)
     h.SetLineWidth(2)
     h.SetLineStyle(1)
 
@@ -1444,13 +1444,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     xAxisTitle = self.xtitle
     h.GetXaxis().SetTitle("")
 
-    h2.SetLineColor(4)
+    h2.SetLineColor(1)
     h2.SetLineWidth(2)
     h2.SetLineStyle(1)
+    h2.SetMarkerStyle(21)
     h2.Scale(1./h2.Integral(), scalingOptions)
 
     h.Draw("hist same E")
-    h2.Draw("hist same E")
+    h2.Draw("same E")
 
     if h3:
       h3.SetLineColor(2)
@@ -1458,6 +1459,17 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h3.SetLineStyle(1)
       h3.Scale(1./h3.Integral(), scalingOptions)
       h3.Draw("hist same")
+
+    lowx = h.GetXaxis().GetXmin()
+    higx = h.GetXaxis().GetXmax()
+    line = ROOT.TLine(lowx,1,higx,1)
+    line.SetLineColor(920+2)
+    line1 = ROOT.TLine(lowx,0.8,higx,0.8)
+    line1.SetLineColor(920+2)
+    line1.SetLineStyle(2) 
+    line2 = ROOT.TLine(lowx,1.2,higx,1.2)
+    line2.SetLineColor(920+2)
+    line2.SetLineStyle(2) 
 
     c.cd()
     pad2 = ROOT.TPad("pad2", "pad2", 0, 0.05, 1, 0.3)
@@ -1472,7 +1484,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     hRatio = h.Clone()
     hRatio.Divide(h2)
     hRatio.SetMarkerStyle(21)
-    hRatio.SetMarkerColor(1)
+    hRatio.SetLineColor(1)
 
     hRatio.GetXaxis().SetTitleSize(30)
     hRatio.GetXaxis().SetTitleFont(43)
@@ -1502,6 +1514,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       hRatio.GetYaxis().SetRangeUser(2-yRatioMax,yRatioMax)
 
     hRatio.Draw("P E")
+    line.Draw("same")
+    line1.Draw("same")
+    line2.Draw("same")
 
     # plot ratio h3/h2
     if h3:

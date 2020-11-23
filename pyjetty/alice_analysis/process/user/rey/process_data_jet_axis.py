@@ -57,7 +57,7 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         max_obs = jetR
 
         if 'Standard_SD' in self.obs_settings[self.observable][i]:
-          max_obs *= 1./8.
+          max_obs *= 1./10.
 
         if self.is_pp:
           name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
@@ -91,8 +91,8 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet.delta_R(jet_groomed)
-        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
-        #  deltaR = -1.
+        if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+          deltaR = -1.
         getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
     if obs_setting == 'Standard_WTA':
@@ -103,8 +103,8 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet_groomed.delta_R(jet_wta)
-        #if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
-        #  deltaR = -1.
+        if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
+          deltaR = -1.
         getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
 
 ##################################################################
