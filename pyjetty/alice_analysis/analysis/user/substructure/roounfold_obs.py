@@ -70,9 +70,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     # Create output directories for unfolding plots
     self.create_output_dirs()
     
-    self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
-                       ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
-                       ROOT.kOrange-3]
+    #self.ColorArray = [ROOT.kBlue-4, ROOT.kAzure+7, ROOT.kCyan-2, ROOT.kViolet-8,
+    #                   ROOT.kBlue-6, ROOT.kGreen+3, ROOT.kPink-4, ROOT.kRed-4,
+    #                   ROOT.kOrange-3]
+    self.ColorArray = [1,2,62,8,93,6,50,4,210]
     self.MarkerArray = [20, 21, 22, 23, 33, 34, 24, 25, 26, 32]
 
     print(self)
@@ -744,6 +745,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     det_bin_array = getattr(self, 'det_bin_array_{}'.format(obs_label))
     hResponse.GetAxis(0).SetRangeUser(det_pt_bin_array[0], det_pt_bin_array[-1])
     hResponse.GetAxis(2).SetRangeUser(det_bin_array[0], det_bin_array[-1])
+    
     hNumerator = hResponse.Projection(3, 1)
     hNumerator.SetName('{}_Numerator'.format(hNumerator.GetName()))
 
@@ -833,16 +835,29 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = '#it{R} = ' + str(jetR)
-    text_latex.DrawLatex(0.3, 0.85, text)
+    text_latex.DrawLatex(0.25, 0.85, text)
 
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     if subobs_label:
-      text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.3, 0.78, text)
+
+      # ----------------
+      title = ''
+      
+      if obs_setting == 'Standard_WTA':
+        title = 'Standard - WTA'
+      elif 'Standard_SD' in obs_setting:
+        title = 'Standard - Soft Drop'
+      elif 'WTA_SD' in obs_setting:
+        title = 'WTA - Soft Drop'
+      else:
+        title = '{} = {}'.format(subobs_label, obs_setting)
+       
+      text_latex.DrawLatex(0.25, 0.78, title)
+      # ----------------
 
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.3, 0.71, text)
+      text_latex.DrawLatex(0.25, 0.71, text)
 
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
     line.SetLineColor(920+2)
@@ -1415,6 +1430,8 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     pad1.SetTopMargin(0.05)
     if '_pt_' in outputFilename:
       pad1.SetLogy()
+    if 'Standard_SD' in obs_label:
+      pad1.SetLogy()
     pad1.Draw()
     pad1.cd()
 
@@ -1438,6 +1455,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       h.GetYaxis().SetRangeUser(0.1*h.GetMinimum(), 1e3*h.GetMaximum())
     else:
       h.GetYaxis().SetRangeUser(0., 3*h.GetMaximum())
+
+    if 'Standard_SD' in obs_label:
+      h.GetYaxis().SetRangeUser(0.5,h.GetMaximum())
 
     h.GetYaxis().SetLabelFont(43)
     h.GetYaxis().SetLabelSize(20)
@@ -1528,7 +1548,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     pad1.cd()
 
-    leg2 = ROOT.TLegend(0.55,0.7,0.8,0.93,legendTitle)
+    leg2 = ROOT.TLegend(0.55,0.75,0.8,0.93,legendTitle)
     leg2.SetFillColor(10)
     leg2.SetBorderSize(0)
     leg2.SetFillStyle(0)
@@ -1544,21 +1564,21 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text_latex = ROOT.TLatex()
       text_latex.SetNDC()
       text = str(min_pt_det) + ' < #it{p}_{T,ch jet} < ' + str(max_pt_det)
-      text_latex.DrawLatex(0.25, 0.85, text)
+      text_latex.DrawLatex(0.3, 0.85, text)
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     text = '#it{R} = ' + str(jetR)
-    text_latex.DrawLatex(0.25, 0.78, text)
+    text_latex.DrawLatex(0.3, 0.78, text)
 
     subobs_label = self.utils.formatted_subobs_label(self.observable)
     if subobs_label:
       text = '{} = {}'.format(subobs_label, obs_setting)
-      text_latex.DrawLatex(0.25, 0.71, text)
+      text_latex.DrawLatex(0.3, 0.71, text)
 
     if grooming_setting:
       text = self.utils.formatted_grooming_label(grooming_setting)
-      text_latex.DrawLatex(0.25, 0.64, text)
+      text_latex.DrawLatex(0.3, 0.64, text)
 
     c.SaveAs(outputFilename)
     c.Close()
