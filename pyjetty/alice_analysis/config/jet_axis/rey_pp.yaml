@@ -121,7 +121,7 @@ figure_approval_status: 'Work in Progress'
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
   - main
-#  - trkeff
+  - trkeff
 #  - prior1
 #  - prior2
 #  - truncation
@@ -130,7 +130,7 @@ systematics_list:
 # Paths to processing output, to be used for unfolding
 main_data: '/rstorage/alice/AnalysisResults/rey/265878/AnalysisResultsFinal.root'
 main_response: '/rstorage/alice/AnalysisResults/rey/265879/AnalysisResultsFinal.root'
-trkeff_response: '/rstorage/alice/AnalysisResults/rey/265879/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/rey/275888/AnalysisResultsFinal.root'
 
 # Prior variation parameters
 prior1_variation_parameter: 0.5
