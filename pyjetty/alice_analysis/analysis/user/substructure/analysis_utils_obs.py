@@ -70,6 +70,8 @@ class AnalysisUtils_Obs(analysis_utils.AnalysisUtils):
       return (1 + obs_true)
     elif self.observable == 'jet_axis':
       return (1 + obs_true)
+      #return prior_variation_parameter * (2 * obs_true - 1) + 1
+      #return math.pow(obs_true, prior_variation_parameter)
     elif self.observable == 'ang':
       # Option 1: sharpening/smoothing the distributions
       #return math.pow(content, 1 + prior_variation_parameter)
