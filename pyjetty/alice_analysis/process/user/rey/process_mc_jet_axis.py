@@ -56,6 +56,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       grooming_setting = self.obs_grooming_settings[self.observable][i]
       if grooming_setting:
         grooming_label = self.utils.grooming_label(grooming_setting)
+        grooming_label = '_' + grooming_label
       else:
         grooming_label = ''
 
@@ -116,6 +117,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
           deltaR = -1.
     if grooming_setting:
       grooming_label = self.utils.grooming_label(grooming_setting)
+      grooming_label = '_' + grooming_label
     else:
       grooming_label = ''
  

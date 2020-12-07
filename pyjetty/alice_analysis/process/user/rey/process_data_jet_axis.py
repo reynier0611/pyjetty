@@ -51,6 +51,7 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         grooming_setting = self.obs_grooming_settings[self.observable][i]
         if grooming_setting:
           grooming_label = self.utils.grooming_label(grooming_setting)
+          grooming_label = '_' + grooming_label
         else:
           grooming_label = ''
 
