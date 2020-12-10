@@ -22,7 +22,7 @@ fi
 # Load modules
 module use /home/rey/heppy/modules
 module load heppy/1.0
-module use /software/users/rey/pyjetty/modules
+module use /home/rey/pyjetty/modules
 module load pyjetty/1.0
 module list
 
