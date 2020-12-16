@@ -11,7 +11,8 @@ namespace RUtil
 {
     typedef double (*prior_scale_func)(const double & obs_true,
                                        const double & content,
-                                       const double & prior_variation_parameter);
+                                       const double & prior_variation_parameter,
+                                       const std::string & label);
 
     //---------------------------------------------------------------
     // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
@@ -117,7 +118,7 @@ namespace RUtil
         // Loop through THn and fill rebinned THn and RooUnfoldResponse
         this->fill_rebinned_thn(response_file_name, thn, thn_rebinned, n_dim, f,
                                 do_roounfoldresponse, roounfold_response,
-                                prior_variation_parameter, move_underflow);
+                                prior_variation_parameter, move_underflow, label);
 
         return thn_rebinned;
 
@@ -209,7 +210,7 @@ namespace RUtil
         const std::string & response_file_name, const THnF* thn, THnF* thn_rebinned, const unsigned int & n_dim,
         const prior_scale_func prior_scale_f, const bool do_roounfoldresponse/*=true*/,
         RooUnfoldResponse* roounfold_response/*=nullptr*/,
-        const double & prior_variation_parameter/*=0.*/, const bool move_underflow/*=false*/) {
+        const double & prior_variation_parameter/*=0.*/, const bool move_underflow/*=false*/, const std::string & label) {
 
         // Only working for n_dim == 4 at the moment; generalizing to N dimensions
         // will require some sort of recursive implementation
@@ -256,7 +257,7 @@ namespace RUtil
 
                             // Scale number of counts according to variation of pt & observable prior
                             double scale_factor = std::pow(x[1], prior_variation_parameter) *
-                                (*prior_scale_f)(x[3], content, prior_variation_parameter);
+                                (*prior_scale_f)(x[3], content, prior_variation_parameter, label);
 
                             content *= scale_factor;
                             error *= scale_factor;
@@ -334,6 +335,8 @@ namespace RUtil
                 return prior_scale_func_2;
             case 3:
                 return prior_scale_func_3;
+            case 4: // scalings used for the jet-axis analysis
+                return prior_scale_func_4;
             default:
                 return prior_scale_func_def;
         }
@@ -343,30 +346,39 @@ namespace RUtil
     // Prior scaling functions
     //---------------------------------------------------------------
     double prior_scale_func_0(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter, const std::string & label) {
         // power law
         return std::pow(obs_true, prior_variation_parameter);
     }
 
     double prior_scale_func_1(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter, const std::string & label) {
         // linear scaling of distributions
         return std::abs(1 + prior_variation_parameter * (2 * obs_true - 1));
     }
 
     double prior_scale_func_2(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter, const std::string & label) {
         // sharpening/smoothing the distributions
         return std::pow(content, 1 + prior_variation_parameter);
     }
 
     double prior_scale_func_3(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter) {
+                              const double & prior_variation_parameter, const std::string & label) {
         return (1 + obs_true);
     }
 
+    double prior_scale_func_4(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter, const std::string & label) {
+        // linear scaling specifically tailored to the jet-axis analysis
+        if (label.find("Standard_SD") != std::string::npos)
+                return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*(-12.5*obs_true+1.18-1.));
+        else
+                return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*( -2.0*obs_true+1.10-1.));
+    }
+
     double prior_scale_func_def(const double & obs_true, const double & content,
-                                const double & prior_variation_parameter) {
+                                const double & prior_variation_parameter, const std::string & label) {
         return obs_true;
     }
 

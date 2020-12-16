@@ -29,18 +29,21 @@ namespace RUtil
 
     typedef double (*prior_scale_func)(const double & obs_true,
                                        const double & content,
-                                       const double & prior_variation_parameter);
+                                       const double & prior_variation_parameter,
+                                       const std::string & label);
 
     double prior_scale_func_0(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter);
+                              const double & prior_variation_parameter, const std::string & label);
     double prior_scale_func_1(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter);
+                              const double & prior_variation_parameter, const std::string & label);
     double prior_scale_func_2(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter);
+                              const double & prior_variation_parameter, const std::string & label);
     double prior_scale_func_3(const double & obs_true, const double & content,
-                              const double & prior_variation_parameter);
+                              const double & prior_variation_parameter, const std::string & label);
+    double prior_scale_func_4(const double & obs_true, const double & content,
+                              const double & prior_variation_parameter, const std::string & label);
     double prior_scale_func_def(const double & obs_true, const double & content,
-                                const double & prior_variation_parameter);
+                                const double & prior_variation_parameter, const std::string & label);
 
 	void delete_h(TH2* h);
 	void delete_h(THn* h);
@@ -97,7 +100,7 @@ namespace RUtil
                                const bool do_roounfoldresponse=true,
                                RooUnfoldResponse* roounfold_response=nullptr,
                                const double & prior_variation_parameter=0.,
-                               const bool move_underflow=false);
+                               const bool move_underflow=false, const std::string & label="");
 
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);
