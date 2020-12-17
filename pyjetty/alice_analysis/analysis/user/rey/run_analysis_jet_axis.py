@@ -273,7 +273,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
       if hPythia:
         hPythia.SetFillStyle(0)
-        hPythia.SetMarkerSize(1.5)
+        hPythia.SetMarkerSize(1.3)
         hPythia.SetMarkerStyle(21)
         hPythia.SetMarkerColor(62)
         hPythia.SetLineColor(62)
@@ -484,7 +484,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
       name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)
       h = getattr(self, name)
-      h.SetMarkerSize(1.5)
+      h.SetMarkerSize(1.3)
       h.SetMarkerStyle(marker)
       h.SetMarkerColor(color)
       h.SetLineStyle(1)
@@ -555,7 +555,15 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           line.SetLineColor(920+2)
           line.SetLineStyle(2)
           line.Draw()
-      
+     
+          box20 = ROOT.TBox(xmin,0.8,xmax,1.2)
+          box20.SetFillColorAlpha(13,0.15)
+          box20.Draw('same')
+
+          box10 = ROOT.TBox(xmin,0.9,xmax,1.1)
+          box10.SetFillColorAlpha(13,0.20)
+          box10.Draw('same')
+
       if plot_pythia:
       
         hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
