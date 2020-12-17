@@ -825,6 +825,67 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     c.SaveAs(output_filename)
     c.Close()
 
+    # ---------------------------------
+    # Plotting ratios of these plots
+    if  option == 'det':
+      c_rat = ROOT.TCanvas('c_rat','c_rat: hist',600,450)
+      c_rat.cd()
+
+      myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+      myPad.SetLeftMargin(0.2)
+      myPad.SetTopMargin(0.07)
+      myPad.SetRightMargin(0.04)
+      myPad.SetBottomMargin(0.13)
+      myPad.Draw()
+      myPad.cd()
+
+      hRatio = hObs_data.Clone() 
+      hRatio.Divide(hObs_det)
+
+      if min_pt < 59:
+        hRatio.Rebin(4)
+        hRatio.Scale(1/4.)
+      else:
+        hRatio.Rebin(4)
+        hRatio.Scale(1/4.)
+
+      hRatio.SetMaximum(3.)
+      hRatio.SetMinimum(0.)
+      hRatio.GetYaxis().SetTitle('det-level data / mc')
+
+      # Create functions for the fit
+      max_x = hRatio.GetXaxis().GetBinUpEdge(hRatio.GetNbinsX())
+      f_pol0 = ROOT.TF1('f_pol0','pol0',0,max_x)
+      f_pol1 = ROOT.TF1('f_pol1','pol1',0,max_x)
+      f_pol2 = ROOT.TF1('f_pol2','pol2',0,max_x)
+      
+      f_pol1.SetLineColor(8)
+      f_pol2.SetLineColor(62)
+
+      hRatio.Fit('f_pol0','Q')
+      hRatio.Fit('f_pol1','Q')
+      hRatio.Fit('f_pol2','Q')
+
+      hRatio.Draw()
+
+      leg_rat_fit = ROOT.TLegend(0.25,0.7,0.87,0.87)
+      leg_rat_fit.SetLineColor(0)
+      leg_rat_fit.SetHeader(obs_setting + ', R = ' + str(jetR) + ', ' + str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}' )
+      leg_rat_fit.AddEntry(f_pol0,'y = A, A = {}, #chi^2 = {}'.format(round(f_pol0.GetParameter(0),3),round((f_pol0.GetChisquare())/(f_pol0.GetNDF()),3)))
+      leg_rat_fit.AddEntry(f_pol1,'y = Ax+B, A = {}, B = {}, #chi^2 = {}'.format(round(f_pol1.GetParameter(0),3),round(f_pol1.GetParameter(1),3),round((f_pol1.GetChisquare())/(f_pol1.GetNDF()),3)))
+      leg_rat_fit.AddEntry(f_pol2,'y = Ax^2+Bx+C, A = {}, B = {}, C = {}, #chi^2 = {}'.format(round(f_pol2.GetParameter(0),3),round(f_pol2.GetParameter(1),3),round(f_pol2.GetParameter(2),3),round((f_pol2.GetChisquare())/(f_pol2.GetNDF()),3)))
+      leg_rat_fit.Draw('same')
+
+      f_pol0.Draw('same')
+      f_pol1.Draw('same')
+      f_pol2.Draw('same')
+
+      output_filename_rat = os.path.join(self.output_dir, 'mc_projections_{}/ratio_h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+      c_rat.SaveAs(output_filename_rat)
+      c_rat.Close()
+
+      del f_pol0
+      del f_pol1
   #---------------------------------------------------------------
   def plot_lund_plane(self, jetR, obs_label, grooming_setting):
 
