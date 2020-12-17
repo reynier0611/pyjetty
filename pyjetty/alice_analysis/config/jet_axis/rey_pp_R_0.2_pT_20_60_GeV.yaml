@@ -1,0 +1,141 @@
+process_observables: ['jet_axis']
+jetR: [0.2]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
+debug_level: 0
+dry_run: False
+fast_simulation: False
+use_ev_id_ext: True
+  
+# Observable block
+jet_axis:
+
+  common_settings:
+    xtitle: '#it{#Delta R}'
+    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#Delta R}'
+    pt_bins_reported: [20, 40, 60]
+    plot_overlay_list:
+      - ['config1', 'config2', 'config3', 'config4', 'config5']
+      - ['config1', 'config3', 'config5']
+      - ['config2', 'config4']
+
+  # RM binnings from processing:
+  #   pt-truth: 10 GeV
+  #   pt-det: 5 GeV
+  #   dR-truth: 40/jetR = 0.01
+  #   dR-det: 80/jetR = 0.005
+
+  config1:
+    axis: 'Standard_WTA'
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03,0.035,0.04,0.045,0.05,0.055, 0.06,0.065, 0.07,0.075, 0.08,0.085,0.09,0.095,0.1] 
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.020,0.025, 0.03, 0.035, 0.04, 0.05, 0.0605, 0.07, 0.1]
+    obs_bins_det_sys_binning: [0., 0.011, 0.031, 0.051, 0.061, 0.071, 0.081, 0.10,0.11, 0.121,0.132,0.15, 0.2, 0.25]
+    reg_param:
+      0.2: 3
+      0.4: 3
+      0.8: 3
+      
+  config2:
+    axis: 'Standard_SD_1'
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,0.006,0.007, 0.008,0.009,0.010,0.011,0.012,0.013,0.014,0.015,0.016,0.017,0.018,0.019,0.02]
+    obs_bins_det: [0., 0.00025, 0.00125, 0.003, 0.005, 0.007, 0.01, 0.0125, 0.015, 0.0175, 0.02]
+    obs_bins_det_sys_binning: [0., 0.0026, 0.005, 0.007, 0.011, 0.016, 0.021, 0.026, 0.03, 0.036, 0.04]
+    reg_param:
+      0.2: 3
+      0.4: 3
+      0.8: 3
+      
+  config3:
+    axis: 'WTA_SD_1'
+    SoftDrop:
+      zcut: 0.2
+      beta: 0
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03,0.035,0.04,0.045,0.05,0.055, 0.06,0.065, 0.07,0.075, 0.08,0.085,0.09,0.095,0.1]
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.020,0.025, 0.03, 0.035, 0.04, 0.05, 0.0605, 0.07, 0.1]
+    obs_bins_det_sys_binning: [0., 0.011, 0.031, 0.051, 0.061, 0.071, 0.081, 0.10,0.11, 0.121,0.132,0.15, 0.2, 0.25]
+    reg_param:
+      0.2: 3
+      0.4: 3
+      0.8: 3
+
+  config4:
+    axis: 'Standard_SD_2'
+    SoftDrop:
+      zcut: 0.3
+      beta: 3
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,0.006,0.007, 0.008,0.009,0.010,0.011,0.012,0.013,0.014,0.015,0.016,0.017,0.018,0.019,0.02]
+    obs_bins_det: [0., 0.00025, 0.00125, 0.003, 0.005, 0.007, 0.01, 0.0125, 0.015, 0.0175, 0.02]
+    obs_bins_det_sys_binning: [0., 0.0026, 0.005, 0.007, 0.011, 0.016, 0.021, 0.026, 0.03, 0.036, 0.04]
+    reg_param:
+      0.2: 3
+      0.4: 3
+      0.8: 3
+      
+  config5:
+    axis: 'WTA_SD_2'
+    SoftDrop:
+      zcut: 0.3
+      beta: 2
+    pt_bins_truth: [5, 20, 40, 60, 80, 100, 150, 300]
+    pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]
+    pt_bins_det_sys_truncation: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 85]
+    obs_bins_truth: [0., 0.005, 0.01, 0.015, 0.02, 0.025, 0.03,0.035,0.04,0.045,0.05,0.055, 0.06,0.065, 0.07,0.075, 0.08,0.085,0.09,0.095,0.1]
+    obs_bins_det: [0., 0.005, 0.01, 0.015, 0.020,0.025, 0.03, 0.035, 0.04, 0.05, 0.0605, 0.07, 0.1]
+    obs_bins_det_sys_binning: [0., 0.011, 0.031, 0.051, 0.061, 0.071, 0.081, 0.10,0.11, 0.121,0.132,0.15, 0.2, 0.25]
+    reg_param:
+      0.2: 3
+      0.4: 3
+      0.8: 3
+
+###############################################################################
+# Analysis parameters
+
+file_format: '.pdf'
+output_dir: '/rstorage/alice/AnalysisResults/rey/'
+roounfold_path: '/home/rey/RooUnfold/RooUnfold/libRooUnfold.so'
+
+analysis_observable: 'jet_axis'
+do_unfolding: True
+force_rebin: False
+do_systematics: True
+do_plot_final_result: True
+do_plot_performance: True
+figure_approval_status: 'Work in Progress'
+
+# List of which systematics to perform
+# Options: [main, trkeff, prior1, prior2, truncation, binning]
+systematics_list:
+  - main
+  #- trkeff
+  - prior1
+  - prior2
+  #- truncation
+  #- binning
+  #- fastsim_generator0
+  #- fastsim_generator1
+
+# Paths to processing output, to be used for unfolding
+main_data: '/rstorage/alice/AnalysisResults/rey/309598/AnalysisResultsFinal.root'
+main_response: '/rstorage/alice/AnalysisResults/rey/309758/AnalysisResultsFinal.root'
+trkeff_response: '/rstorage/alice/AnalysisResults/rey/296130/AnalysisResultsFinal.root'
+fastsim_response: ['/rstorage/alice/AnalysisResults/rey/298128/AnalysisResultsFinal.root',
+                   '/rstorage/alice/AnalysisResults/rey/303830/AnalysisResultsFinal.root']
+# Prior variation parameters
+prior_variation_option: 4
+prior1_variation_parameter: 0.5
+prior2_variation_parameter: -0.5
