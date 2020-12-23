@@ -44,7 +44,7 @@ module list
 
 # Run python script via pipenv
 cd /home/rey/pyjetty/pyjetty/alice_analysis
-python process/user/rey/process_mc_jet_axis.py -c config/jet_axis/rey_pp.yaml -f $INPUT_FILE -o $OUTPUT_DIR
+python process/user/rey/process_mc_jet_axis.py -c config/jet_axis/rey_pp_processing.yaml -f $INPUT_FILE -o $OUTPUT_DIR
 
 # Move stdout to appropriate folder
 mv /rstorage/alice/AnalysisResults/rey/slurm-${JOB_ID}_${TASK_ID}.out /rstorage/alice/AnalysisResults/rey/${JOB_ID}/
