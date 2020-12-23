@@ -369,16 +369,6 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       else:
         n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
-
-    elif plot_pythia_from_mateusz:
-    
-      fPythia_name = '/Users/jamesmulligan/Analysis_theta_g/Pythia_new/pythia.root'
-      fPythia = ROOT.TFile(fPythia_name, 'READ')
-      print(fPythia.ls())
-      hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label, int(min_pt_truth), int(max_pt_truth))
-      hPythia = fPythia.Get(hname)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
-      n_jets_tagged = hPythia.Integral(hPythia2.FindBin(self.truth_bin_array(obs_label)[0]), hPythia2.GetNbinsX())
       
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
     hPythia.Scale(1./n_jets_inclusive, 'width')
@@ -661,19 +651,6 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     
     myLegend.Draw()
     
-    if self.observable == 'theta_g':
-      rg_axis_tf1 = ROOT.TF1('rg_axis_tf1', 'x', 0, jetR-0.01)
-      rg_axis = ROOT.TGaxis(xmin, 2*ymax, xmax, 2*ymax, 'rg_axis_tf1', 505, '- S')
-      rg_axis.SetTitle('#it{R}_{g}')
-      rg_axis.SetTitleSize(25)
-      rg_axis.SetTitleFont(43)
-      rg_axis.SetTitleOffset(0.6)
-      rg_axis.SetLabelFont(43)
-      rg_axis.SetLabelSize(25)
-      rg_axis.SetTickSize(0.015)
-      rg_axis.SetLabelOffset(0.015)
-      rg_axis.Draw()
-
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
