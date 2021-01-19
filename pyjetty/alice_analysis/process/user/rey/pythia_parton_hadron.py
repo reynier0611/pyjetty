@@ -29,6 +29,7 @@ from pyjetty.alice_analysis.process.base import process_base
 ROOT.gROOT.SetBatch(True)
 # Automatically set Sumw2 when creating new histograms
 ROOT.TH1.SetDefaultSumw2()
+ROOT.TH2.SetDefaultSumw2()
 
 ################################################################
 class pythia_parton_hadron(process_base.ProcessBase):
@@ -54,13 +55,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
         # Defaults to None if not in use
         self.level = args.no_match_level
 
-        self.jetR_list = config["jetR"]
-        #self.beta_list = config["betas"]
+        self.jetR_list = config["jetR"] 
 
         self.user_seed = args.user_seed
         self.nev = args.nev
-
-        #self.pTbins = np.arange( 5 , 200 + 1, (200 - 5) / 195 )
 
         # hadron level - ALICE tracking restriction
         self.max_eta_hadron = 0.9
@@ -146,63 +144,45 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             if self.level in [None, 'ch']:
               name = 'hJetPt_ch_R%s' % R_label
-              h = ROOT.TH1F(name, name+';p_{T}^{ch jet};#frac{dN}{dp_{T}^{ch jet}};', 300, 0, 300)
-              h.Sumw2()  # enables calculation of errors
+              h = ROOT.TH1F(name, name+';p_{T}^{ch jet};#frac{dN}{dp_{T}^{ch jet}};', 300, 0, 300) 
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_ch_R%s' % R_label
-              h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
-              h.GetXaxis().SetTitle('#it{p}_{T}^{ch jet}')
-              h.GetYaxis().SetTitle('#it{N}_{constit}^{ch jet}')
-              h.Sumw2()
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{ch jet};#it{N}_{constit}^{ch jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level in [None, 'h']:
               name = 'hJetPt_h_R%s' % R_label
               h = ROOT.TH1F(name, name+';p_{T}^{jet, h};#frac{dN}{dp_{T}^{jet, h}};', 300, 0, 300)
-              h.Sumw2()
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_h_R%s' % R_label
-              h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
-              h.GetXaxis().SetTitle('#it{p}_{T}^{h jet}')
-              h.GetYaxis().SetTitle('#it{N}_{constit}^{h jet}')
-              h.Sumw2()
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{h jet};#it{N}_{constit}^{h jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level in [None, 'p']:
               name = 'hJetPt_p_R%s' % R_label
               h = ROOT.TH1F(name, name+';p_{T}^{jet, parton};#frac{dN}{dp_{T}^{jet, parton}};',300, 0, 300)
-              h.Sumw2()
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_p_R%s' % R_label
-              h = ROOT.TH2F(name, name, 300, 0, 300, 50, 0.5, 50.5)
-              h.GetXaxis().SetTitle('#it{p}_{T}^{p jet}')
-              h.GetYaxis().SetTitle('#it{N}_{constit}^{p jet}')
-              h.Sumw2()
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{p jet};#it{N}_{constit}^{p jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level == None:
               name = 'hJetPtRes_R%s' % R_label
-              h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-              h.GetXaxis().SetTitle('#it{p}_{T}^{parton jet}')
-              h.GetYaxis().SetTitle('#frac{#it{p}_{T}^{parton jet}-#it{p}_{T}^{ch jet}}{#it{p}_{T}^{parton jet}}')
-              h.Sumw2()
+              h = ROOT.TH2F(name, name +';#it{p}_{T}^{parton jet};#frac{#it{p}_{T}^{parton jet}-#it{p}_{T}^{ch jet}}{#it{p}_{T}^{parton jet}}', 300, 0, 300, 200, -1., 1.)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hResponse_JetPt_R%s' % R_label
-              h = ROOT.TH2F(name, name, 200, 0, 200, 200, 0, 200)
-              h.GetXaxis().SetTitle('#it{p}_{T}^{parton jet}')
-              h.GetYaxis().SetTitle('#it{p}_{T}^{ch jet}')
-              h.Sumw2()
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{parton jet};#it{p}_{T}^{ch jet}', 200, 0, 200, 200, 0, 200)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
@@ -217,20 +197,20 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 grooming_label = self.utils.grooming_label(grooming_setting)
                 common_name_2 += '_' + grooming_label
 
-              max_obs = 1.
+              max_obs = 1. # Maximum value for the observable
               obs_label = self.observable
               if self.observable == 'jet_axis':
                 obs_label = '#DeltaR'
-                max_obs = jetR / 2.
+                max_obs = jetR / 2. # in the case of jet-axis differences the distribution is observed to die off around jetR / 2 (except for Standard - SD)
                 if 'Standard_SD' in axes:
-                  max_obs = jetR / 10. 
+                  max_obs = jetR / 10. # in the Standard - SD the distribution is observed to die off around jetR / 10
 
               if self.level in [None, 'ch']:
                 name = common_name_1 + 'JetPt_ch' + common_name_2
                 h = ROOT.TH2F(name, name, 195, 5, 200, 160, 0, max_obs)
                 h.GetXaxis().SetTitle('p_{T}^{ch jet}')
-                h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{ch}}')
-                h.Sumw2()
+                #h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{ch}}')
+                h.GetYaxis().SetTitle(obs_label+'^{ch}}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
               
@@ -239,15 +219,14 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 h.GetXaxis().SetTitle('p_{T}^{ch jet}')
                 #h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{ch}}')
                 h.GetYaxis().SetTitle(obs_label+'^{ch}}')
-                h.Sumw2()
                 setattr(self, name, h)
 
               if self.level in [None, 'h']:
                 name = common_name_1 + 'JetPt_h' + common_name_2
                 h = ROOT.TH2F(name, name, 195, 5, 200,160, 0, max_obs)
                 h.GetXaxis().SetTitle('p_{T}^{jet, h}')
-                h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{h}}')
-                h.Sumw2()
+                #h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{h}}')
+                h.GetYaxis().SetTitle(obs_label+'^{h}}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -255,8 +234,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 name = common_name_1 + 'JetPt_p' + common_name_2
                 h = ROOT.TH2F(name, name, 195, 5, 200,160, 0, max_obs)
                 h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
-                h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{parton}}')
-                h.Sumw2()
+                #h.GetYaxis().SetTitle('#frac{dN}{d'+obs_label+'^{parton}}')
+                h.GetYaxis().SetTitle(obs_label+'^{p}}')
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -265,7 +244,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 h = ROOT.TH2F(name, name, 100, 0, max_obs, 100, 0, max_obs)
                 h.GetXaxis().SetTitle(obs_label+'^{parton}')
                 h.GetYaxis().SetTitle(obs_label+'^{ch}')
-                h.Sumw2()
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -273,7 +251,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 h = ROOT.TH2F(name, name, 300, 0, 300, 200, -3., 3.)
                 h.GetXaxis().SetTitle('p_{T}^{jet, parton}')
                 h.GetYaxis().SetTitle('#frac{'+obs_label+'^{jet, parton}-'+obs_label+'^{ch jet}}{'+obs_label+'^{jet, parton}}')
-                h.Sumw2()
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -281,7 +258,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 h = ROOT.TH2F(name, name, 300, 0, 300, 200, -2., 2.)
                 h.GetXaxis().SetTitle('#it{p}_{T}^{jet, ch}')
                 h.GetYaxis().SetTitle(obs_label+'^{jet, parton} - '+obs_label+'^{jet, ch}')
-                h.Sumw2()
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
