@@ -144,45 +144,45 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             if self.level in [None, 'ch']:
               name = 'hJetPt_ch_R%s' % R_label
-              h = ROOT.TH1F(name, name+';p_{T}^{ch jet};#frac{dN}{dp_{T}^{ch jet}};', 300, 0, 300) 
+              h = ROOT.TH1F(name, name+';p_{T}^{ch jet} [GeV/#it{c}];#frac{dN}{dp_{T}^{ch jet}};', 300, 0, 300) 
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_ch_R%s' % R_label
-              h = ROOT.TH2F(name, name+';#it{p}_{T}^{ch jet};#it{N}_{constit}^{ch jet}', 300, 0, 300, 50, 0.5, 50.5)
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{ch jet} [GeV/#it{c}];#it{N}_{constit}^{ch jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level in [None, 'h']:
               name = 'hJetPt_h_R%s' % R_label
-              h = ROOT.TH1F(name, name+';p_{T}^{jet, h};#frac{dN}{dp_{T}^{jet, h}};', 300, 0, 300)
+              h = ROOT.TH1F(name, name+';p_{T}^{jet, h} [GeV/#it{c}];#frac{dN}{dp_{T}^{jet, h}};', 300, 0, 300)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_h_R%s' % R_label
-              h = ROOT.TH2F(name, name+';#it{p}_{T}^{h jet};#it{N}_{constit}^{h jet}', 300, 0, 300, 50, 0.5, 50.5)
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{h jet} [GeV/#it{c}];#it{N}_{constit}^{h jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level in [None, 'p']:
               name = 'hJetPt_p_R%s' % R_label
-              h = ROOT.TH1F(name, name+';p_{T}^{jet, parton};#frac{dN}{dp_{T}^{jet, parton}};',300, 0, 300)
+              h = ROOT.TH1F(name, name+';p_{T}^{jet, parton} [GeV/#it{c}];#frac{dN}{dp_{T}^{jet, parton}};',300, 0, 300)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hNconstit_Pt_p_R%s' % R_label
-              h = ROOT.TH2F(name, name+';#it{p}_{T}^{p jet};#it{N}_{constit}^{p jet}', 300, 0, 300, 50, 0.5, 50.5)
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{p jet} [GeV/#it{c}];#it{N}_{constit}^{p jet}', 300, 0, 300, 50, 0.5, 50.5)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
             if self.level == None:
               name = 'hJetPtRes_R%s' % R_label
-              h = ROOT.TH2F(name, name +';#it{p}_{T}^{parton jet};#frac{#it{p}_{T}^{parton jet}-#it{p}_{T}^{ch jet}}{#it{p}_{T}^{parton jet}}', 300, 0, 300, 200, -1., 1.)
+              h = ROOT.TH2F(name, name +';#it{p}_{T}^{parton jet} [GeV/#it{c}];#frac{#it{p}_{T}^{parton jet}-#it{p}_{T}^{ch jet}}{#it{p}_{T}^{parton jet}}', 300, 0, 300, 200, -1., 1.)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
               name = 'hResponse_JetPt_R%s' % R_label
-              h = ROOT.TH2F(name, name+';#it{p}_{T}^{parton jet};#it{p}_{T}^{ch jet}', 200, 0, 200, 200, 0, 200)
+              h = ROOT.TH2F(name, name+';#it{p}_{T}^{parton jet} [GeV/#it{c}];#it{p}_{T}^{ch jet} [GeV/#it{c}]', 200, 0, 200, 200, 0, 200)
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
@@ -207,23 +207,23 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
               if self.level in [None, 'ch']:
                 name = common_name_1 + 'JetPt_ch' + common_name_2
-                h = ROOT.TH2F(name, name + ';p_{T}^{ch jet};'+obs_label+'^{ch}}', 195, 5, 200, 160, 0, max_obs)
+                h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}}', 195, 5, 200, 160, 0, max_obs)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
               
                 name = common_name_1 + 'JetPt_ch_MPIon' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{ch jet};'+obs_label+'^{ch}}', 195, 5, 200,160, 0, max_obs)
+                h = ROOT.TH2F(name, name+';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}}', 195, 5, 200,160, 0, max_obs)
                 setattr(self, name, h)
 
               if self.level in [None, 'h']:
                 name = common_name_1 + 'JetPt_h' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, h};'+obs_label+'^{h}}', 195, 5, 200,160, 0, max_obs)
+                h = ROOT.TH2F(name, name+';p_{T}^{jet, h} [GeV/#it{c}];'+obs_label+'^{h}}', 195, 5, 200,160, 0, max_obs)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
               if self.level in [None, 'p']:
                 name = common_name_1 + 'JetPt_p' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton};'+obs_label+'^{p}}', 195, 5, 200,160, 0, max_obs)
+                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton} [GeV/#it{c}];'+obs_label+'^{p}}', 195, 5, 200,160, 0, max_obs)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -234,12 +234,12 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 getattr(self, hist_list_name).append(h)
 
                 name = common_name_1 + 'Residual_JetPt' + common_name_2 
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton};#frac{'+obs_label+'^{jet, parton}-'+obs_label+'^{ch jet}}{'+obs_label+'^{jet, parton}}', 300, 0, 300, 200, -3., 3.)
+                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton} [GeV/#it{c}];#frac{'+obs_label+'^{jet, parton}-'+obs_label+'^{ch jet}}{'+obs_label+'^{jet, parton}}', 300, 0, 300, 200, -3., 3.)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
                 name = common_name_1 + 'Diff_JetPt' + common_name_2
-                h = ROOT.TH2F(name, name+';#it{p}_{T}^{jet, ch};'+obs_label+'^{jet, parton} - '+obs_label+'^{jet, ch}', 300, 0, 300, 200, -2., 2.)
+                h = ROOT.TH2F(name, name+';#it{p}_{T}^{jet, ch} [GeV/#it{c}];'+obs_label+'^{jet, parton} - '+obs_label+'^{jet, ch}', 300, 0, 300, 200, -2., 2.)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
 
@@ -385,6 +385,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     drhh = jchh.delta_R(jh)
                     if drhh < jetR / 2.:
                         drhh_list.append((j,jh))
+                
                 if len(drhh_list) != 1:
                     count1 += 1
                 else:  # Require unique match
@@ -447,12 +448,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
         if(self.observable=='jet_axis'):
           for i, axes in enumerate(self.obs_settings[self.observable]):
-            obs_setting = axes
             grooming_setting = self.obs_grooming_settings[self.observable][i]
             
-            deltaR_ch = self.angle_between_jet_axes(jetR, jchh, obs_setting, grooming_setting)
-            deltaR_h  = self.angle_between_jet_axes(jetR, jh  , obs_setting, grooming_setting)
-            deltaR_p  = self.angle_between_jet_axes(jetR, jp  , obs_setting, grooming_setting)
+            deltaR_ch = self.angle_between_jet_axes(jetR, jchh, axes, grooming_setting)
+            deltaR_h  = self.angle_between_jet_axes(jetR, jh  , axes, grooming_setting)
+            deltaR_p  = self.angle_between_jet_axes(jetR, jp  , axes, grooming_setting)
 
             common_name = 'R' + str(jetR).replace('.','') +'_' + axes
             grooming_label = ''
@@ -479,9 +479,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
         if(self.observable=='jet_axis'):
           for i, axes in enumerate(self.obs_settings[self.observable]):
-            obs_setting = axes
             grooming_setting = self.obs_grooming_settings[self.observable][i]
-            deltaR = self.angle_between_jet_axes(jetR, jet, obs_setting, grooming_setting)
+            deltaR = self.angle_between_jet_axes(jetR, jet, axes, grooming_setting)
 
             common_name = 'R' + str(jetR).replace('.','') +'_' + axes 
             grooming_label = ''
@@ -499,9 +498,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
         if(self.observable=='jet_axis'):
           for i, axes in enumerate(self.obs_settings[self.observable]):
-            obs_setting = axes
             grooming_setting = self.obs_grooming_settings[self.observable][i]
-            deltaR = self.angle_between_jet_axes(jetR, jet, obs_setting, grooming_setting)
+            deltaR = self.angle_between_jet_axes(jetR, jet, axes, grooming_setting)
 
             common_name_1 = 'h_' + self.observable + '_'
             common_name_2 = '_R' + str(jetR).replace('.','') +'_' + axes + '_Scaled'
@@ -522,7 +520,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
         R_label = str(jetR).replace('.', '') + 'Scaled'
 
-        # Fill jet histograms which are not dependant on observable
+        # Fill jet histograms which are not dependent on observable
         if self.level in [None, 'ch']:
             getattr(self, 'hJetPt_ch_R%s' % R_label).Fill(jch.pt())
             getattr(self, 'hNconstit_Pt_ch_R%s' % R_label).Fill(jch.pt(), len(jch.constituents()))
@@ -548,12 +546,11 @@ class pythia_parton_hadron(process_base.ProcessBase):
         
         if(self.observable=='jet_axis'):
           for i, axes in enumerate(self.obs_settings[self.observable]):
-            obs_setting = axes
             grooming_setting = self.obs_grooming_settings[self.observable][i]
 
-            deltaR_ch = self.angle_between_jet_axes(jetR, jch, obs_setting, grooming_setting)
-            deltaR_h  = self.angle_between_jet_axes(jetR, jh , obs_setting, grooming_setting)
-            deltaR_p  = self.angle_between_jet_axes(jetR, jp , obs_setting, grooming_setting) 
+            deltaR_ch = self.angle_between_jet_axes(jetR, jch, axes, grooming_setting)
+            deltaR_h  = self.angle_between_jet_axes(jetR, jh , axes, grooming_setting)
+            deltaR_p  = self.angle_between_jet_axes(jetR, jp , axes, grooming_setting) 
             
             common_name_1 = 'h_' + self.observable + '_'
             common_name_2 = '_R' + str(jetR).replace('.','') +'_' + axes + '_Scaled' 
@@ -629,7 +626,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
     def scale_jet_histograms(self, scale_f, MPI_scale_f):
 
         for jetR in self.jetR_list:
-            hist_list_name = "hist_list_R%s" % str(jetR).replace('.', '')
+            hist_list_name = "hist_list_R%s" % str(jetR).replace('.', '') 
             for h in getattr(self, hist_list_name):
                 h.Scale(scale_f)
            
