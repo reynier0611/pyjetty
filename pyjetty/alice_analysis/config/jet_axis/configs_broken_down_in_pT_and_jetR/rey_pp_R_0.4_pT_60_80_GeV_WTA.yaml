@@ -247,10 +247,10 @@ figure_approval_status: 'Work in Progress'
 # Options: [main, trkeff, prior1, prior2, truncation, binning]
 systematics_list:
   - main
-  #- trkeff
-  #- prior1
-  #- prior2
-  #- truncation
+  - trkeff
+  - prior1
+  - prior2
+  - truncation
   #- binning
   #- fastsim_generator0
   #- fastsim_generator1

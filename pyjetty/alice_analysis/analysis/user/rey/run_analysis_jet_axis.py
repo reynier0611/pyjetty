@@ -502,7 +502,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(9*ymax)
+        myBlankHisto.SetMaximum(100*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
           myBlankHisto.SetMinimum(6e-2) # Don't draw 0 on top panel 
