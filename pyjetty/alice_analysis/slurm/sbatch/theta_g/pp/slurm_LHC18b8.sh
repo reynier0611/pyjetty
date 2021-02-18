@@ -7,11 +7,11 @@
 #SBATCH --array=1-160
 #SBATCH --output=/rstorage/alice/AnalysisResults/james/slurm-%A_%a.out
 
-FILE_PATHS='/rstorage/alice/data/LHC18b8/449/files.txt'
+FILE_PATHS='/rstorage/alice/data/LHC18b8/569/files.txt'
 NFILES=$(wc -l < $FILE_PATHS)
 echo "N files to process: ${NFILES}"
 
-# Currently we have 7 nodes * 20 cores active
+# Currently we have 8 nodes * 20 cores active
 FILES_PER_JOB=$(( $NFILES / 160 + 1 ))
 echo "Files per job: $FILES_PER_JOB"
 
