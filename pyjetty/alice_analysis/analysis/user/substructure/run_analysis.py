@@ -890,7 +890,7 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
-    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum())
+    myBlankHisto.SetMaximum(1.7*h_total.GetMaximum(h_total.GetMaximum()-0.001))
     if h_total.GetMaximum() > 100:
       myBlankHisto.SetMaximum(50)
     if h_total.GetBinContent(h_total.GetNbinsX()) > 50:
