@@ -64,12 +64,17 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
 
     main_data = config['main_data']
     main_response = config['main_response']
+    fastsim_response_list = config['fastsim_response']
     if main_data:
       self.fData = ROOT.TFile(main_data, 'READ')
     else:
       self.fData = None
     self.fMC = ROOT.TFile(main_response, 'READ')
-    
+    self.fastMC = []
+    self.fastMC_gen = []
+    for i in range(len(fastsim_response_list)):
+      self.fastMC.append(ROOT.TFile(fastsim_response_list[i], 'READ'))
+      
     if self.R_max:
       self.suffix = '_Rmax{}'.format(self.R_max)
     else:
@@ -821,6 +826,38 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       text = self.formatted_grooming_label(grooming_setting, verbose = not self.groomer_studies)
       text_latex.DrawLatex(0.3, 0.55, text)
 
+    # ---------------------------------
+    # Getting fast-simulation responses
+    if option == 'det':
+      fast_sim_color = [4,92]
+      name = 'hResponse_JetPt_{}_R{}_{}{}{}'.format(self.observable, jetR, obs_label, self.suffix, self.scaled_suffix)
+      hfastRM = []
+      hfastObs_det = []
+      for i in range(len(self.fastMC)):
+        hfastRM.append(self.fastMC[i].Get(name))
+        if hfastRM[i].GetSumw2() is 0:
+          hfastRM[i].Sumw2()
+        # Get histogram of observable at MC-det from RM
+        hfastRM[i].GetAxis(0).SetRangeUser(min_pt, max_pt)
+        hfastObs_det.append(hfastRM[i].Projection(2))
+        hfastObs_det[i].SetName('hfastObs_det_{}'.format(obs_label))
+        self.scale_by_integral(hfastObs_det[i])
+        hfastObs_det[i].Rebin(rebin_val_mcdet)
+        hfastObs_det[i].Scale(1., 'width')
+        if grooming_setting and 'sd' in grooming_setting:
+          hfastObs_det[i].GetXaxis().SetRange(0,hfastObs_det[i].GetNbinsX())
+        hfastObs_det[i].SetLineColor(fast_sim_color[i])
+        hfastObs_det[i].SetLineWidth(2)
+        if i == 1:
+          hfastObs_det[i].SetLineStyle(2)
+        hfastObs_det[i].Draw('samehist') 
+
+      leg_fast = ROOT.TLegend(0.6,0.3,0.8,0.5)
+      leg_fast.AddEntry(hfastObs_det[0],'Herwig (fast)')
+      leg_fast.AddEntry(hfastObs_det[1],'Pythia (fast)')
+      leg_fast.Draw('same')
+    # ---------------------------------
+
     output_filename = os.path.join(self.output_dir, 'mc_projections_{}/h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
     c.SaveAs(output_filename)
     c.Close()
@@ -839,20 +876,44 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       myPad.Draw()
       myPad.cd()
 
-      hRatio = hObs_data.Clone() 
+      hRatio = hObs_data.Clone() # Ratio of data / full MC
       hRatio.Divide(hObs_det)
 
-      if min_pt < 59:
+      hRatio_fast1 = hObs_data.Clone() # Ratio of data / fast simulation 1
+      hRatio_fast1.Divide(hfastObs_det[0])
+      hRatio_fast1.SetMarkerColor(hfastObs_det[0].GetLineColor())
+      hRatio_fast1.SetLineColor(hfastObs_det[0].GetLineColor())
+
+      hRatio_fast2 = hObs_data.Clone() # Ratio of data / fast simulation 2
+      hRatio_fast2.Divide(hfastObs_det[1])
+      hRatio_fast2.SetMarkerColor(hfastObs_det[1].GetLineColor())
+      hRatio_fast2.SetLineColor(hfastObs_det[1].GetLineColor())
+
+      hRatio_f1_f2 = hfastObs_det[0].Clone() # Ratio of data / fast simulation 2
+      hRatio_f1_f2.Divide(hfastObs_det[1])
+      hRatio_f1_f2.SetMarkerColor(2)
+      hRatio_f1_f2.SetLineColor(2)
+      hRatio_f1_f2.SetMarkerStyle(21)
+
+      if min_pt > 39:
         hRatio.Rebin(4)
         hRatio.Scale(1/4.)
-      else:
-        hRatio.Rebin(4)
-        hRatio.Scale(1/4.)
+        hRatio_fast1.Rebin(4)
+        hRatio_fast1.Scale(1/4.)
+        hRatio_fast2.Rebin(4)
+        hRatio_fast2.Scale(1/4.)
+        hRatio_f1_f2.Rebin(4)
+        hRatio_f1_f2.Scale(1/4.)
 
       hRatio.SetMaximum(3.)
       hRatio.SetMinimum(0.)
       hRatio.GetYaxis().SetTitle('det-level data / mc')
 
+      if self.observable=='jet_axis' and not ('Standard_SD' in obs_label):
+        hRatio.GetXaxis().SetRangeUser(0,jetR/2.)
+        hRatio_fast1.GetXaxis().SetRangeUser(0,jetR/2.)
+        hRatio_fast2.GetXaxis().SetRangeUser(0,jetR/2.)
+      
       # Create functions for the fit
       max_x = hRatio.GetXaxis().GetBinUpEdge(hRatio.GetNbinsX())
       f_pol0 = ROOT.TF1('f_pol0','pol0',0,max_x)
@@ -862,23 +923,38 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       f_pol1.SetLineColor(8)
       f_pol2.SetLineColor(62)
 
-      hRatio.Fit('f_pol0','Q')
-      hRatio.Fit('f_pol1','Q')
-      hRatio.Fit('f_pol2','Q')
+      #hRatio.Fit('f_pol0','Q')
+      #hRatio.Fit('f_pol1','Q')
+      #hRatio.Fit('f_pol2','Q')
 
       hRatio.Draw()
+      hRatio_fast1.Draw('same')
+      hRatio_fast2.Draw('same')
+      hRatio_f1_f2.Draw('same')
 
-      leg_rat_fit = ROOT.TLegend(0.25,0.7,0.87,0.87)
-      leg_rat_fit.SetLineColor(0)
-      leg_rat_fit.SetHeader(obs_setting + ', R = ' + str(jetR) + ', ' + str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}' )
-      leg_rat_fit.AddEntry(f_pol0,'y = A, A = {}, #chi^2 = {}'.format(round(f_pol0.GetParameter(0),3),round((f_pol0.GetChisquare())/(f_pol0.GetNDF()),3)))
-      leg_rat_fit.AddEntry(f_pol1,'y = Ax+B, A = {}, B = {}, #chi^2 = {}'.format(round(f_pol1.GetParameter(0),3),round(f_pol1.GetParameter(1),3),round((f_pol1.GetChisquare())/(f_pol1.GetNDF()),3)))
-      leg_rat_fit.AddEntry(f_pol2,'y = Ax^2+Bx+C, A = {}, B = {}, C = {}, #chi^2 = {}'.format(round(f_pol2.GetParameter(0),3),round(f_pol2.GetParameter(1),3),round(f_pol2.GetParameter(2),3),round((f_pol2.GetChisquare())/(f_pol2.GetNDF()),3)))
-      leg_rat_fit.Draw('same')
+      l1 = ROOT.TLine(0,1,hRatio.GetXaxis().GetXmax(),1)
+      l1.Draw('same')
 
-      f_pol0.Draw('same')
-      f_pol1.Draw('same')
-      f_pol2.Draw('same')
+      #leg_rat_fit = ROOT.TLegend(0.25,0.7,0.87,0.87)
+      #leg_rat_fit.SetLineColor(0)
+      #leg_rat_fit.SetHeader(obs_setting + ', R = ' + str(jetR) + ', ' + str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}' )
+      #leg_rat_fit.AddEntry(f_pol0,'y = A, A = {}, #chi^2 = {}'.format(round(f_pol0.GetParameter(0),3),round((f_pol0.GetChisquare())/(f_pol0.GetNDF()),3)))
+      #leg_rat_fit.AddEntry(f_pol1,'y = Ax+B, A = {}, B = {}, #chi^2 = {}'.format(round(f_pol1.GetParameter(0),3),round(f_pol1.GetParameter(1),3),round((f_pol1.GetChisquare())/(f_pol1.GetNDF()),3)))
+      #leg_rat_fit.AddEntry(f_pol2,'y = Ax^2+Bx+C, A = {}, B = {}, C = {}, #chi^2 = {}'.format(round(f_pol2.GetParameter(0),3),round(f_pol2.GetParameter(1),3),round(f_pol2.GetParameter(2),3),round((f_pol2.GetChisquare())/(f_pol2.GetNDF()),3)))
+      #leg_rat_fit.Draw('same')
+
+      #f_pol0.Draw('same')
+      #f_pol1.Draw('same')
+      #f_pol2.Draw('same')
+
+      leg_fast = ROOT.TLegend(0.5,0.7,0.85,0.85)
+      leg_fast.SetLineColor(0)
+      leg_fast.SetHeader(obs_setting + ', R = ' + str(jetR) + ', ' + str(min_pt) + ' < #it{p}_{T, ch jet}^{truth} < ' + str(max_pt) + ' GeV/#it{c}' )
+      leg_fast.AddEntry(hRatio,'Data / Full Pythia')
+      leg_fast.AddEntry(hRatio_fast1,'Data / Fast Herwig')
+      leg_fast.AddEntry(hRatio_fast2,'Data / Fast Pythia')
+      leg_fast.AddEntry(hRatio_f1_f2,'fast Herwig / fast Pythia')
+      leg_fast.Draw('same')
 
       output_filename_rat = os.path.join(self.output_dir, 'mc_projections_{}/ratio_h_{}_MC_R{}_{}_{}-{}.pdf'.format(option, self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
       c_rat.SaveAs(output_filename_rat)
