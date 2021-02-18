@@ -88,17 +88,21 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
     reclusterer_wta =  fjcontrib.Recluster(jet_def_wta)
     jet_wta = reclusterer_wta.result(jet)
 
+    name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, obs_label, suffix)
+
     if 'Standard_SD' in obs_setting:
       if grooming_setting in self.obs_grooming_settings[self.observable]:
         jet_groomed = jet_groomed_lund.pair()
         deltaR = jet.delta_R(jet_groomed)
         if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
           deltaR = -1.
-        getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+        #getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+        getattr(self, name).Fill(jet.pt(), deltaR)
 
     if obs_setting == 'Standard_WTA':
       deltaR = jet.delta_R(jet_wta)
-      getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+      #getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+      getattr(self, name).Fill(jet.pt(), deltaR)
 
     if 'WTA_SD' in obs_setting:
       if grooming_setting in self.obs_grooming_settings[self.observable]:
@@ -106,7 +110,8 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         deltaR = jet_groomed.delta_R(jet_wta)
         if jet_groomed_lund.Delta() < 0: # untagged jet (i.e. failed SD)
           deltaR = -1.
-        getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+        #getattr(self, 'h_{}_JetPt_R{}_{}'.format(self.observable, jetR, obs_label)).Fill(jet.pt(), deltaR)
+        getattr(self, name).Fill(jet.pt(), deltaR)
 
 ##################################################################
 if __name__ == '__main__':
