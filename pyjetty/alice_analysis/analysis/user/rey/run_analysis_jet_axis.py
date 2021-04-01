@@ -608,16 +608,21 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       text = ''
       if subobs_label == '#Delta #it{R}_{axis}':
         if obs_setting == 'Standard_WTA':
-          text += '{} = {}'.format(subobs_label, 'Standard - WTA')
+          text += 'Standard - WTA'
         elif 'Standard_SD' in obs_setting:
-          text += '{} = {}'.format(subobs_label, 'Standard - ')
+          text += 'Standard - '
         elif 'WTA_SD' in obs_setting:
-          text += '{} = {}'.format(subobs_label, 'WTA - ')
+          text += 'WTA - '
       elif subobs_label:
         text += '{} = {}'.format(subobs_label, obs_setting)
         
       if grooming_setting:
-        text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
+        text += self.utils.formatted_grooming_label(grooming_setting, verbose=True).replace("Soft Drop","SD")
+
+        if 'sd' in grooming_setting:
+          fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
+          text += ' (#it{f}_{tagged}^{data} = %3.3f)' % fraction_tagged 
+
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
         
     pad1.cd()
