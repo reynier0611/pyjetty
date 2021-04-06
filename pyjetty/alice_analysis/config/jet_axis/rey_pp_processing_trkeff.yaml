@@ -1,5 +1,5 @@
 process_observables: ['jet_axis']
-jetR: [0.2,0.4,0.8]
+jetR: [0.2,0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.04
 debug_level: 0
@@ -36,53 +36,17 @@ jet_axis:
       zcut: 0.1
       beta: 3      
 
-  config6:
-    axis: 'Standard_SD_5'
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
-
   config7:
     axis: 'Standard_SD_6'
     SoftDrop:
       zcut: 0.2
       beta: 1
 
-  config8:
-    axis: 'Standard_SD_7'
-    SoftDrop:
-      zcut: 0.2
-      beta: 2
-
-  config9:
-    axis: 'Standard_SD_8'
-    SoftDrop:
-      zcut: 0.2
-      beta: 3
-
-  config10:
-    axis: 'Standard_SD_9'
-    SoftDrop:
-      zcut: 0.3
-      beta: 0
-
   config11:
     axis: 'Standard_SD_10'
     SoftDrop:
       zcut: 0.3
       beta: 1
-
-  config12:
-    axis: 'Standard_SD_11'
-    SoftDrop:
-      zcut: 0.3
-      beta: 2
-
-  config13:
-    axis: 'Standard_SD_12'
-    SoftDrop:
-      zcut: 0.3
-      beta: 3
 
   config14:
     axis: 'WTA_SD_1'
@@ -108,50 +72,14 @@ jet_axis:
       zcut: 0.1
       beta: 3
 
-  config18:
-    axis: 'WTA_SD_5'
-    SoftDrop:
-      zcut: 0.2
-      beta: 0
-
   config19:
     axis: 'WTA_SD_6'
     SoftDrop:
       zcut: 0.2
       beta: 1
 
-  config20:
-    axis: 'WTA_SD_7'
-    SoftDrop:
-      zcut: 0.2
-      beta: 2
-
-  config21:
-    axis: 'WTA_SD_8'
-    SoftDrop:
-      zcut: 0.2
-      beta: 3
-
-  config22:
-    axis: 'WTA_SD_9'
-    SoftDrop:
-      zcut: 0.3
-      beta: 0
-
   config23:
     axis: 'WTA_SD_10'
     SoftDrop:
       zcut: 0.3
       beta: 1
-
-  config24:
-    axis: 'WTA_SD_11'
-    SoftDrop:
-      zcut: 0.3
-      beta: 2
-
-  config25:
-    axis: 'WTA_SD_12'
-    SoftDrop:
-      zcut: 0.3
-      beta: 3
