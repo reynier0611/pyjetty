@@ -49,6 +49,12 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     if 'fPythia' in config:
       self.fPythia_name = config['fPythia']
 
+    self.fastsim_response_list = config['fastsim_response']
+
+    user_wants_herwig_plot_in_final = True #Set to false to impose no Herwig in final plot, even if file exists
+    if 'fastsim_generator0' in config['systematics_list'] and user_wants_herwig_plot_in_final:
+      self.plot_herwig = True
+
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
@@ -396,6 +402,46 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     return h
 
   #----------------------------------------------------------------------
+  def herwig_prediction(self, jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth):
+
+    hHerwig = self.get_herwig_from_fast_response(jetR, obs_label, min_pt_truth, max_pt_truth)
+
+    if grooming_setting and 'sd' in grooming_setting:
+
+      # If SD, the untagged jets are in the first bin
+      n_jets_inclusive = hHerwig.Integral(1, hHerwig.GetNbinsX()+1)
+      n_jets_tagged = hHerwig.Integral(hHerwig.FindBin(self.truth_bin_array(obs_label)[0]), hHerwig.GetNbinsX()+1)
+
+    else:
+      n_jets_inclusive = hHerwig.Integral(1, hHerwig.GetNbinsX()+1)
+      n_jets_tagged = hHerwig.Integral(hHerwig.FindBin(self.truth_bin_array(obs_label)[0]), hHerwig.GetNbinsX())
+
+    fraction_tagged_herwig =  n_jets_tagged/n_jets_inclusive
+    hHerwig.Scale(1./n_jets_inclusive, 'width')
+
+    return [hHerwig, fraction_tagged_herwig]
+
+  #----------------------------------------------------------------------
+  def get_herwig_from_fast_response(self, jetR, obs_label, min_pt_truth, max_pt_truth): 
+    # Assuming HERWIG is the first fast-simulation file declared in the config
+    output_dir = getattr(self, 'output_dir_fastsim_generator0') 
+    file = os.path.join(output_dir, 'response.root')
+    f = ROOT.TFile(file, 'READ')
+
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn = f.Get(thn_name)
+    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+    h = thn.Projection(3)
+    h.SetName('hPythia_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h.SetDirectory(0)
+
+    for i in range(1, h.GetNbinsX() + 1):
+      h.SetBinError(i, 0)
+
+    return h
+
+  #----------------------------------------------------------------------
   def plot_final_result_overlay(self, i_config, jetR, overlay_list):
     print('Plotting overlay of {}'.format(overlay_list))
 
@@ -411,17 +457,24 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
   def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
     
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
-    if plot_ratio:
+
+    if plot_ratio and self.plot_herwig:
+      c = ROOT.TCanvas(name, name, 600, 800)
+    elif plot_ratio:
       c = ROOT.TCanvas(name, name, 600, 650)
     else:
       c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
     
     c.cd()
-    if plot_ratio:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0.3,1,1)
+
+    if plot_ratio and self.plot_herwig:
+      pad1 = ROOT.TPad('myPad','The pad',0,0.4,1,1)
+    elif plot_ratio:
+      pad1 = ROOT.TPad('myPad','The pad',0,0.3,1,1)
     else:
-      pad1 = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+      pad1 = ROOT.TPad('myPad','The pad',0,0  ,1,1)
+
     pad1.SetLeftMargin(0.2)
     pad1.SetTopMargin(0.07)
     pad1.SetRightMargin(0.04)
@@ -513,49 +566,64 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         
         # Plot ratio
         if plot_ratio:
-          
+          l1, b10, b20 = self.line_box10_box20(xmin,xmax)
+
           c.cd()
-          pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
-          pad2.SetTopMargin(0)
-          pad2.SetBottomMargin(0.4)
-          pad2.SetLeftMargin(0.2)
-          pad2.SetRightMargin(0.04)
-          pad2.SetTicks(0,1)
-          pad2.Draw()
-          pad2.cd()
+          if self.plot_herwig:
+            pad2 = ROOT.TPad("pad2", "pad2", 0, 0.25, 1, 0.4)
+            pad3 = ROOT.TPad("pad3", "pad3", 0, 0.01, 1, 0.25)
+            pad2.SetTopMargin(0)
+            pad3.SetTopMargin(0)
+            pad2.SetBottomMargin(0)
+            pad3.SetBottomMargin(0.4)
+            pad2.SetLeftMargin(0.2)
+            pad3.SetLeftMargin(0.2)
+            pad2.SetRightMargin(0.04)
+            pad3.SetRightMargin(0.04)
+            pad2.SetTicks(0,1)
+            pad3.SetTicks(0,1)
+            pad2.Draw()
+            pad3.Draw()
+
+            pad2.cd()
+            myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
+            self.pretty_blank_histo(myBlankHisto2,xtitle,"#frac{Data}{PYTHIA}")
+            myBlankHisto2.Draw()
+
+            l1.Draw("same")
+            b10.Draw("same")
+            b20.Draw("same")
+
+            pad3.cd()
+            myBlankHisto3 = myBlankHisto.Clone("myBlankHisto_C")
+            self.pretty_blank_histo(myBlankHisto3,xtitle,"#frac{Data}{HERWIG}")
+            myBlankHisto3.Draw()
+
+            l1.Draw("same")
+            b10.Draw("same")
+            b20.Draw("same")
+
+          else:
+            pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
+            pad2.SetTopMargin(0)
+            pad2.SetBottomMargin(0.4)
+            pad2.SetLeftMargin(0.2)
+            pad2.SetRightMargin(0.04)
+            pad2.SetTicks(0,1)
+            pad2.Draw()
+            pad2.cd()
+            
+            pad2.cd()
+            myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
+            self.pretty_blank_histo(myBlankHisto2,xtitle,"#frac{Data}{PYTHIA}")
+            myBlankHisto2.Draw()
           
-          myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
-          myBlankHisto2.SetYTitle("#frac{Data}{PYTHIA}")
-          myBlankHisto2.SetXTitle(xtitle)
-          myBlankHisto2.GetXaxis().SetTitleSize(30)
-          myBlankHisto2.GetXaxis().SetTitleFont(43)
-          myBlankHisto2.GetXaxis().SetTitleOffset(4.)
-          myBlankHisto2.GetXaxis().SetLabelFont(43)
-          myBlankHisto2.GetXaxis().SetLabelSize(25)
-          myBlankHisto2.GetYaxis().SetTitleSize(25)
-          myBlankHisto2.GetYaxis().SetTitleFont(43)
-          myBlankHisto2.GetYaxis().SetTitleOffset(2.2)
-          myBlankHisto2.GetYaxis().SetLabelFont(43)
-          myBlankHisto2.GetYaxis().SetLabelSize(25)
-          myBlankHisto2.GetYaxis().SetNdivisions(107)
-          myBlankHisto2.GetYaxis().SetRangeUser(0.61, 1.79)
-          myBlankHisto2.Draw()
-        
-          line = ROOT.TLine(xmin,1,xmax,1)
-          line.SetLineColor(920+2)
-          line.SetLineStyle(2)
-          line.Draw()
-     
-          box20 = ROOT.TBox(xmin,0.8,xmax,1.2)
-          box20.SetFillColorAlpha(13,0.15)
-          box20.Draw('same')
+            l1.Draw("same")
+            b10.Draw("same")
+            b20.Draw("same")
 
-          box10 = ROOT.TBox(xmin,0.9,xmax,1.1)
-          box10.SetFillColorAlpha(13,0.20)
-          box10.Draw('same')
-
-      if plot_pythia:
-      
+      # ------------------------------- overlay PYTHIA with final results -------------------------------
+      if plot_pythia: 
         hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
 
         plot_errors = False
@@ -568,7 +636,16 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           hPythia.SetLineColor(color)
           hPythia.SetLineColorAlpha(color, 0.5)
           hPythia.SetLineWidth(4)
+      # ------------------------------- overlay HERWIG with final results -------------------------------
+      if self.plot_herwig:
+        hHerwig, fraction_tagged_herwig = self.herwig_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
+        hHerwig.SetLineColor(color)
+        hHerwig.SetLineColorAlpha(color, 0.5)
+        hHerwig.SetLineWidth(4)
+        hHerwig.SetLineStyle(2)
       
+      # -------------------------------------------------------------------------------------------------
+      # Create graphs that will be plotted on the bottom pads (ratios)
       if plot_ratio:
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
@@ -585,6 +662,21 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         if plot_pythia:
           hRatioStat.Divide(hPythia)
 
+        if self.plot_herwig:
+          hRatioSys2 = h_sys.Clone()
+          hRatioSys2.SetName('{}_Ratio_herwig'.format(h_sys.GetName()))
+          hRatioSys2.Divide(hHerwig)
+          hRatioSys2.SetLineColor(0)
+          hRatioSys2.SetFillColor(color)
+          hRatioSys2.SetFillColorAlpha(color, 0.3)
+          hRatioSys2.SetFillStyle(1001)
+          hRatioSys2.SetLineWidth(0)
+          hRatioStat2 = h.Clone()
+          hRatioStat2.SetName('{}_Ratio_herwig'.format(h.GetName()))
+          hRatioStat2.Divide(hHerwig)
+
+      # -------------------------------------------------------------------------------------------------
+      # Actually start plotting the graphs previously defined
       pad1.cd()
       
       if plot_pythia:
@@ -593,17 +685,29 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           hPythia.DrawCopy('E3 same')
         else:
           hPythia.DrawCopy('L hist same')
-          
+      
+      if self.plot_herwig:
+        hHerwig.DrawCopy('L hist same')
+
       h_sys.DrawCopy('E2 same')
       h.DrawCopy('PE X0 same')
-      
+
+      # -------------------------------
+      # Go to the lower panels and plot ratios      
       if plot_ratio:
         pad2.cd()
         if plot_pythia:
           hRatioSys.DrawCopy('E2 same')
        
         hRatioStat.DrawCopy('PE X0 same')
-        
+
+        if self.plot_herwig:
+          pad3.cd()
+          hRatioSys2.DrawCopy('E2 same')
+          hRatioStat2.DrawCopy('PE X0 same')
+
+      # -------------------------------
+      # Go back to the upper panel and add text, legends, ...
       subobs_label = self.utils.formatted_subobs_label(self.observable)
       text = ''
       if subobs_label == '#Delta #it{R}_{axis}':
@@ -629,6 +733,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash 2013', 'l') 
+    if self.plot_herwig:
+      myLegend.AddEntry(hHerwig, 'HERWIG7', 'l')
     
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -666,6 +772,39 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     outputFilename = os.path.join(output_dir, name)
     c.SaveAs(outputFilename)
     c.Close()
+
+  #----------------------------------------------------------------------
+  # Make blank histogram look nice
+  def pretty_blank_histo(self,histo,xtit,ytit,ymin=0.61,ymax=1.69):
+    histo.SetYTitle(ytit)
+    histo.SetXTitle(xtit)
+    histo.GetXaxis().SetTitleSize(30)
+    histo.GetXaxis().SetTitleFont(43)
+    histo.GetXaxis().SetTitleOffset(4.)
+    histo.GetXaxis().SetLabelFont(43)
+    histo.GetXaxis().SetLabelSize(25)
+    histo.GetYaxis().SetTitleSize(25)
+    histo.GetYaxis().SetTitleFont(43)
+    histo.GetYaxis().SetTitleOffset(2.2)
+    histo.GetYaxis().SetLabelFont(43)
+    histo.GetYaxis().SetLabelSize(25)
+    histo.GetYaxis().SetNdivisions(107)
+    histo.GetYaxis().SetRangeUser(ymin,ymax)
+
+  #----------------------------------------------------------------------
+  # return a line at y = 1, and two boxes representing 10 and 20% levels
+  def line_box10_box20(self,xmin,xmax):
+    line = ROOT.TLine(xmin,1,xmax,1)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+
+    box20 = ROOT.TBox(xmin,0.8,xmax,1.2)
+    box20.SetFillColorAlpha(13,0.12)
+
+    box10 = ROOT.TBox(xmin,0.9,xmax,1.1)
+    box10.SetFillColorAlpha(13,0.18)
+
+    return line, box10, box20
 
   #----------------------------------------------------------------------
   # Return maximum y-value of unfolded results in a subconfig list
