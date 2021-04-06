@@ -852,9 +852,10 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
           hfastObs_det[i].SetLineStyle(2)
         hfastObs_det[i].Draw('samehist') 
 
-      leg_fast = ROOT.TLegend(0.6,0.3,0.8,0.5)
-      leg_fast.AddEntry(hfastObs_det[0],'Herwig (fast)')
-      leg_fast.AddEntry(hfastObs_det[1],'Pythia (fast)')
+      leg_fast = ROOT.TLegend(0.68,0.4,0.88,0.65)
+      leg_fast.SetLineColor(0)
+      leg_fast.AddEntry(hfastObs_det[0],'HERWIG7 (fast)')
+      leg_fast.AddEntry(hfastObs_det[1],'PYTHIA8 (fast)')
       leg_fast.Draw('same')
     # ---------------------------------
 
