@@ -60,3 +60,6 @@ else
 		--user-seed $SEED --py-pthatmin $PTHAT_MIN --py-ecm $ECM --nev $NEV_PER_JOB \
 		--pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2
 fi
+
+# example to run locally
+# python process/user/rey/pythia_parton_hadron.py -c config/jet_axis/gen_jet_axis_pythia_herwig.yaml --output-dir ./ --user-seed 1 --py-pthatmin 5 --py-ecm 5020 --nev 2 --pythiaopts HardQCD:all=on,TimeShower:pTmin=0.2
