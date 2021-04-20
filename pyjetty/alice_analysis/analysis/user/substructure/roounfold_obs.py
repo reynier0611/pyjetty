@@ -454,6 +454,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     leg = ROOT.TLegend(0.75,0.65,0.88,0.92)
     self.utils.setup_legend(leg,0.04)
 
+    # this will be used in the case of 'stat_uncert' to determine whether we want to plot fractional uncertainty or absolute
+    fractional=False
+
     # Select final regularization parameter
     if self.use_max_reg_param:
       reg_param_final = self.max_reg_param
@@ -475,8 +478,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           continue
 
       elif option == 'stat_uncert':
-        h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth,
-                                                   max_pt_truth, option)
+        h = self.get_unfolded_result_uncertainties(jetR, obs_label, i, min_pt_truth, max_pt_truth, option,fractional)
 
       # Save the histogram to the result ROOT file for future access
       if len(option):
@@ -532,9 +534,14 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
           myBlankHisto.SetMinimum(0.9)
           myBlankHisto.SetYTitle('#frac{n_{iter}}{(n_{iter}-1)}')
         if option == 'stat_uncert':
-          myBlankHisto.SetMaximum(40)
-          myBlankHisto.SetMinimum(0.)
-          myBlankHisto.SetYTitle('statistical uncertainty (%)')
+          if fractional:
+            myBlankHisto.SetMaximum(40)
+            myBlankHisto.SetMinimum(0.)
+            myBlankHisto.SetYTitle('statistical uncertainty (%)')
+          else:
+            myBlankHisto.SetMaximum(h.GetMaximum()*1.6)
+            myBlankHisto.SetMinimum(0.)
+            myBlankHisto.SetYTitle('statistical uncertainty')
         myBlankHisto.Draw("E")
 
       # Plot the current calculation on the superimposed plot
@@ -555,6 +562,11 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       line.SetLineStyle(2)
       line.SetLineWidth(4)
       line.Draw()
+
+      # box representing the 5% convergence level
+      box5 = ROOT.TBox(truth_bin_array[0],0.95,truth_bin_array[-1],1.05)
+      box5.SetFillColorAlpha(13,0.15)
+      box5.Draw('same')
 
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
@@ -610,7 +622,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # Get unfolded result uncertainties in 1D, for fixed slice of pt
   #################################################################################################
   def get_unfolded_result_uncertainties(self, jetR, obs_label, i,
-                                        min_pt_truth, max_pt_truth, option):
+                                        min_pt_truth, max_pt_truth, option, fractional=True):
 
     h = self.get_unfolded_result(jetR, obs_label, i, min_pt_truth, max_pt_truth, option)
 
@@ -621,8 +633,10 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         print('Warning: content of {} in bin {} is {}'.format(h.GetName(), bin_n, content))
         print('Setting unfolded uncertainty to 0 to prevent div by 0 error.')
         h.SetBinContent(bin_n, 0)
-      else:
+      elif fractional:
         h.SetBinContent(bin_n, uncertainty/content * 100)
+      else:
+        h.SetBinContent(bin_n, uncertainty)
       h.SetBinError(bin_n, 0)
 
     return h
