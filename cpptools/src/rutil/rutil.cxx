@@ -374,10 +374,19 @@ namespace RUtil
                               const double & prior_variation_parameter, const std::string & label) {
         // linear scaling specifically tailored to the jet-axis analysis
         double R = stod(label.substr(1,3));
-        if (label.find("Standard_SD") != std::string::npos)
-                return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*(-10.0*0.4/R*obs_true+1.18-1.));
-        else
+        if (label.find("Standard_SD") != std::string::npos){
+		if (label.find("zcut01") != std::string::npos)
+	                return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*(-4.00/R*obs_true+0.18));
+		else if (label.find("zcut02") != std::string::npos)
+			return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*(-2.29/R*obs_true+0.18));
+		else if (label.find("zcut03") != std::string::npos)
+			return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*(-1.78/R*obs_true+0.18));
+		else
+			return 1.;
+        }
+	else{
                 return 2.*(std::abs(prior_variation_parameter)+prior_variation_parameter*( -1.5*0.4/R*obs_true+1.10-1.));
+    	}
     }
 
     double prior_scale_func_def(const double & obs_true, const double & content,
