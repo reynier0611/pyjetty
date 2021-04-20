@@ -13,7 +13,7 @@ ROOT.gROOT.SetBatch(True)
 ###################################################################################
 # Main function
 def scaleHistograms_fastHerwig():
-  EndPtHardBin = 1
+  EndPtHardBin = 6
 
   for bin in range(1, EndPtHardBin+1):
     print('cleaning RM in bin ',bin,' out of ',EndPtHardBin)
