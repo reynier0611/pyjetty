@@ -751,7 +751,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myPad.SetTopMargin(0.07)
     myPad.SetRightMargin(0.04)
     myPad.SetBottomMargin(0.13)
-    if 'Standard_SD' in obs_setting:
+    #if 'Standard_SD' in obs_setting:
+    logy = True
+    if logy:
       myPad.SetLogy()
     myPad.Draw()
     myPad.cd()
@@ -769,8 +771,9 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     # in the Standard - SD case for the jet-axis analysis, there's a peak at #Delta R = 0
     # coming from jets that fully 'fail' the grooming process (and are returned identical to the standard jet).
     # Thus, in this case we plot these distributions in a log scale (so that the peak does not dominate the plot)
-    if 'Standard_SD' in obs_setting:
-      hObs_det.SetMinimum(6e-1)
+    #if 'Standard_SD' in obs_setting:
+    if logy:
+      hObs_det.SetMinimum(6e-2)
       hObs_det.SetMaximum(50*hObs_det.GetMaximum())
     hObs_det.Draw('hist')
     leg.AddEntry(hObs_det, "MC det", "L")
