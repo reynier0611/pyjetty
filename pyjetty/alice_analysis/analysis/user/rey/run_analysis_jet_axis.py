@@ -54,6 +54,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     user_wants_herwig_plot_in_final = True #Set to false to impose no Herwig in final plot, even if file exists
     if 'fastsim_generator0' in config['systematics_list'] and user_wants_herwig_plot_in_final:
       self.plot_herwig = True
+    else:
+      self.plot_herwig = False
 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -646,7 +648,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       
       # -------------------------------------------------------------------------------------------------
       # Create graphs that will be plotted on the bottom pads (ratios)
-      if plot_ratio:
+      if plot_ratio: 
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
         if plot_pythia:
