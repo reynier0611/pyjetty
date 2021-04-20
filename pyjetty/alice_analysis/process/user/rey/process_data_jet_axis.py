@@ -58,7 +58,13 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
         max_obs = jetR
 
         if 'Standard_SD' in self.obs_settings[self.observable][i]:
-          max_obs *= 1./10.
+          #max_obs *= 1./10.
+          if grooming_setting['sd'][0] == 0.1:
+            max_obs *= 1./8.
+          elif grooming_setting['sd'][0] == 0.2:
+            max_obs *= 1./5.
+          elif grooming_setting['sd'][0] == 0.3:
+            max_obs *= 1./4.
 
         if self.is_pp:
           name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)

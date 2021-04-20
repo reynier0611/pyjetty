@@ -75,8 +75,17 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       max = [150., 300., jetR, jetR]
 
       if 'Standard_SD' in self.obs_settings[self.observable][i]:
-        max[2] *= 1./10.
-        max[3] *= 1./10.
+        #max[2] *= 1./10.
+        #max[3] *= 1./10.
+        if grooming_setting['sd'][0] == 0.1:
+          max[2] *= 1./8.
+          max[3] *= 1./8.
+        elif grooming_setting['sd'][0] == 0.2:
+          max[2] *= 1./5.
+          max[3] *= 1./5.
+        elif grooming_setting['sd'][0] == 0.3:
+          max[2] *= 1./4. 
+          max[3] *= 1./4.
 
       name = 'hResponse_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
       self.create_thn(name, title, dim, nbins, min, max)
