@@ -43,7 +43,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
   #---------------------------------------------------------------
   def initialize_user_config(self):
     
-    do_mpi_scaling = True
+    do_mpi_scaling = False
 
     # Read config file
     with open(self.config_file, 'r') as stream:
@@ -53,7 +53,8 @@ class TheoryFolding(run_analysis.RunAnalysis):
 
     if 'theory_dir' in config:
       self.theory_dir = config['theory_dir']
-      self.theory_pt_bins = config['theory_pt_bins']
+      #self.theory_pt_bins = config['theory_pt_bins']
+      self.theory_obs_bins = config['theory_obs_bins']
       self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
       self.theory_response_labels = config['response_labels']
       self.theory_pt_scale_factors_filepath = os.path.join(self.theory_dir, config['pt_scale_factors_path'])
@@ -63,6 +64,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
       self.th_pt_min = 10
       self.th_pt_max = 150
       self.th_pt_inc = 5
+      self.n_pt_bins = (int)((self.th_pt_max-self.th_pt_min)/self.th_pt_inc)
     else:
       self.do_theory = False
 
@@ -72,15 +74,15 @@ class TheoryFolding(run_analysis.RunAnalysis):
       self.outfile = ROOT.TFile(outfilename,'recreate')
 
       self.load_theory_calculation_details()
-      #self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
-      #print("Loading response matrix for folding theory predictions...")
-      #self.load_theory_response()
-      #print("Loading theory histograms...")
-      #self.load_theory_histograms()
-      #print("Folding theory histograms...")
-      #self.fold_theory()
-      #print("Undoing some scalings...")
-      #self.undo_scalings(do_mpi_scaling)
+      self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
+      print("Loading theory histograms...")
+      self.load_theory_histograms()
+      print("Loading response matrix for folding theory predictions...")
+      self.load_theory_response()
+      print("Folding theory histograms...")
+      self.fold_theory()
+      print("Undoing some scalings...")
+      self.undo_scalings(do_mpi_scaling)
 
       self.outfile.Close()
 
@@ -88,7 +90,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
   # Load theory calculations
   #---------------------------------------------------------------
   def load_theory_calculation_details(self):
-    self.theory_obs_bins = {}
+    self.theory_obs_points = {}
     self.theory_scale_vars = {}
 
     # Loop over jet R
@@ -96,6 +98,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
       th_obs_R = []
       scale_var = []
       # Loop through subconfigurations to unfold
+      # (e.g. Standard_WTA, Standard_SD_1, ...)
       for j,subconfig in enumerate(self.obs_subconfig_list):
         path_to_theory = os.path.join(self.theory_dir,self.obs_settings[j])
 
@@ -107,92 +110,16 @@ class TheoryFolding(run_analysis.RunAnalysis):
 
         # Open theory file and load its contents
         with open( th_fname ) as f:
-          lines = [line for line in f.read().split('\n') if line] #[0] != '#']
-        
+          #lines = [line for line in f.read().split('\n') if line] #[0] != '#']
+          lines = [line for line in f.read().split('\n') if line[0] != '#']
+
         angle = [float(line.split()[0]) for line in lines] 
         th_obs_R.append(angle)
  
         scale_var.append(len(lines[0].split())-1) # number of scale variations
 
-      self.theory_obs_bins[jetR] = th_obs_R
+      self.theory_obs_points[jetR] = th_obs_R
       self.theory_scale_vars[jetR] = scale_var
-
-    
-
-  #---------------------------------------------------------------
-  # Load 4D response matrices used for folding the theory predictions
-  #---------------------------------------------------------------
-  def load_theory_response(self):
-
-    # Check to see if Roounfold file already exists
-    if not os.path.exists(self.output_dir_theory):
-      os.makedirs(self.output_dir_theory)
-    roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
-    roounfold_exists = os.path.exists(roounfold_filename)
-
-    # Loop over jet R
-    for jetR in self.jetR_list:
-      # Loop through subconfigurations to unfold
-      for i, subconfig in enumerate(self.obs_subconfig_list):
-       
-        obs_setting = self.obs_settings[i] 
-        grooming_setting = self.grooming_settings[i]
- 
-        label = "R%s_" % (str(jetR).replace('.', ''))
-        label += obs_setting
-        label += '_Scaled'
-
-        if grooming_setting:
-          label += '_'
-          label += self.utils.grooming_label(grooming_setting)
-       
-        # loop over response files (e.g. Pythia, Herwig, ...)
-        for ri, response in enumerate(self.theory_response_files):
-
-          # Load response matrix to take input from full hadron to charged hadron level
-          name_h2ch = "hResponse_JetPt_" + self.observable + "_h2ch_" + label
-          thn_h2ch = response.Get(name_h2ch)
-          setattr(self, '%s_%i' % (name_h2ch, ri), thn_h2ch)
-
-          # Create Roounfold object
-          name_roounfold_h2ch = '%s_Roounfold_%i' % (name_h2ch, ri)
-
-          #if roounfold_exists and not self.rebin_theory_response:
-          #  fRoo = ROOT.TFile(roounfold_filename, 'READ')
-          #  roounfold_response_h2ch = fRoo.Get(name_roounfold_h2ch)
-          #  fRoo.Close()
-
-          #else:
-          '''
-          Response axes:
-          ['p_{T}^{ch jet}', 'p_{T}^{jet, parton}', '#lambda_{#beta}^{ch}', '#lambda_{#beta}^{parton}']
-          as compared to the usual
-          ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
-          '''
-          det_pt_bin_array = array('d', self.theory_pt_bins)
-          tru_pt_bin_array = det_pt_bin_array
-          det_obs_bin_array = array('d', self.theory_obs_bins[jetR][i]) 
-          tru_obs_bin_array = det_obs_bin_array
-          
-          if grooming_setting:
-            # Add bin for underflow value (tagging fraction)
-            det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
-            tru_obs_bin_array = det_obs_bin_array
-          
-          n_dim = 4
-          
-          self.histutils.rebin_thn( roounfold_filename, thn_h2ch, '%s_Rebinned_%i' % (name_h2ch, ri), name_roounfold_h2ch, n_dim,
-            len(det_pt_bin_array )-1, det_pt_bin_array ,
-            len(det_obs_bin_array)-1, det_obs_bin_array,
-            len(tru_pt_bin_array )-1, tru_pt_bin_array ,
-            len(tru_obs_bin_array)-1, tru_obs_bin_array,
-            label,0,1, grooming_setting!=None )
-
-          f_resp = ROOT.TFile(roounfold_filename, 'READ')
-          roounfold_response_h2ch = f_resp.Get(name_roounfold_h2ch)
-          f_resp.Close()
-          # here is where the else above stopped
-          setattr(self, name_roounfold_h2ch, roounfold_response_h2ch)
       
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
@@ -204,34 +131,44 @@ class TheoryFolding(run_analysis.RunAnalysis):
     # Loop over jet R
     for jetR in self.jetR_list:
       # Loop through subconfigurations to unfold
+      # (e.g. Standard_WTA, Standard_SD_1, ...)
       for i, subconfig in enumerate(self.obs_subconfig_list):
-        obs_setting = self.obs_settings[i]
-        grooming_setting = self.grooming_settings[i]
+        obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
+        grooming_setting = self.grooming_settings[i]  # grooming parameters
+ 
+        pt_bins = array('d',np.arange(self.th_pt_min,self.th_pt_max+self.th_pt_inc,self.th_pt_inc))
+        obs_points = array('d', self.theory_obs_points[jetR][i]) # points provided in the theory calculation
+        obs_bins = array('d', self.theory_obs_bins)              # bins which we want to have in the result
 
-        pt_bins = array('d', self.theory_pt_bins)
-        obs_bins = array('d', self.theory_obs_bins[jetR][i]) 
         if grooming_setting:
           # Add bin for underflow value (tagging fraction)
           obs_bins = np.insert(obs_bins, 0, -0.001)
           print('Gotta implement this. Bailing out')
           exit()
-        
+
         obs_width = np.subtract(obs_bins[1:],obs_bins[:-1])
 
         # -----------------------------------------------------        
         # Create histograms where theory curves will be stored
+        th_hists_no_scaling = []
         th_hists = []
         hist_names = [] 
 
-        for sv in range(0,self.theory_scale_vars[jetR][i]):
+        n_hist = self.theory_scale_vars[jetR][i] 
+
+        for sv in range(0,n_hist):
           hist_name = 'h2_th_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
           if grooming_setting:
             hist_name += '_'
             hist_name += self.utils.grooming_label(grooming_setting)
+          hist_name_no_scaling = hist_name + '_no_scaling'
           th_hist = ROOT.TH2D(hist_name,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+          th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+
           th_hists.append(th_hist)
           hist_names.append(hist_name)
-        
+          th_hists_no_scaling.append(th_hist_no_scaling)
+
         # -----------------------------------------------------
         # opening theory file by file and fill histograms
         th_path = os.path.join(self.theory_dir,obs_setting)
@@ -248,30 +185,125 @@ class TheoryFolding(run_analysis.RunAnalysis):
           th_file = os.path.join(th_path,th_file)
 
           with open( th_file ) as f:
-            lines = [line for line in f.read().split('\n') if line]
-            n_hist = len(lines[0].split())-1
+            
+            lines = [line for line in f.read().split('\n') if line[0] != '#']
 
             x_val = [float(line.split()[0]) for line in lines]
-  
+
             # loop over scale variations and fill histograms
             for sv in range(0,n_hist):
               y_val_n = [float(line.split()[sv+1]) for line in lines]
-              y_val_n = np.multiply(y_val_n,obs_width)
-              integral_y_val_n = sum(y_val_n)
-              y_val_n = [ val * scale_f / integral_y_val_n for val in y_val_n ]
 
-              # go over each line in the file
-              for ob in range(0,len(lines)-1):
-                th_hists[sv].SetBinContent(p+1,ob+1,y_val_n[ob])
+              # Interpolate the given values and return the value at the requested bin center
+              y_val_bin_ctr = self.interpolate_values_linear(x_val,y_val_n,obs_bins) 
+ 
+              # Save content into histogram before any scaling has been applied (to compare to the theory curves and make sure everything went fine)
+              for ob in range(0,len(obs_bins)-1): 
+                th_hists_no_scaling[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
 
+              # Multiply by bin width and scale with pT-dependent factor
+              y_val_bin_ctr = np.multiply(y_val_bin_ctr,obs_width)
+              integral_y_val_bin_ctr = sum(y_val_bin_ctr)
+              y_val_bin_ctr = [ val * scale_f / integral_y_val_bin_ctr for val in y_val_bin_ctr ] 
+
+              # Save scaled content into the histograms
+              for ob in range(0,len(obs_bins)-1):
+                th_hists[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
+              
           f.close()
-
+       
         # -----------------------------------------------------
         # Setting the filled histograms as attributes
         self.outfile.cd()
         for sv in range(0,n_hist):
           setattr(self,hist_names[sv],th_hists[sv])
+          th_hists_no_scaling[sv].Write()
           th_hists[sv].Write()
+
+  #---------------------------------------------------------------
+  # Linear interpolation
+  #---------------------------------------------------------------
+  def interpolate_values_linear(self,x_val,y_val_n,new_bin_edges):
+    # given the input bin edges, determine the bin center by taking the average
+    bin_ctr = np.add(new_bin_edges[1:],new_bin_edges[:-1])/2.
+    # do the interpolation
+    return np.interp(bin_ctr,x_val,y_val_n,left=0,right=0,period=None)
+
+  #---------------------------------------------------------------
+  # Load 4D response matrices used for folding the theory predictions
+  #---------------------------------------------------------------
+  def load_theory_response(self):
+
+    # Check to see if Roounfold file already exists
+    if not os.path.exists(self.output_dir_theory):
+      os.makedirs(self.output_dir_theory)
+    roounfold_filename = os.path.join(self.output_dir_theory, 'fRoounfold.root')
+    roounfold_exists = os.path.exists(roounfold_filename)
+
+    # Loop over jet R
+    for jetR in self.jetR_list:
+      # Loop through subconfigurations to unfold
+      # (e.g. Standard_WTA, Standard_SD_1, ...)
+      for i, subconfig in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]           # labels such as 'Standard_WTA'
+        grooming_setting = self.grooming_settings[i] # grooming parameters
+
+        label = "R%s_" % (str(jetR).replace('.', ''))
+        label += obs_setting
+        label += '_Scaled'
+
+        if grooming_setting:
+          label += '_'
+          label += self.utils.grooming_label(grooming_setting)
+
+        # loop over response files (e.g. Pythia, Herwig, ...)
+        for ri, response in enumerate(self.theory_response_files):
+
+          # Load response matrix to take input from full hadron to charged hadron level
+          name_h2ch = "hResponse_JetPt_" + self.observable + "_h2ch_" + label
+          thn_h2ch = response.Get(name_h2ch)
+          setattr(self, '%s_%i' % (name_h2ch, ri), thn_h2ch)
+
+          # Create Roounfold object
+          name_roounfold_h2ch = '%s_Roounfold_%i' % (name_h2ch, ri)
+          name_roounfold_thn  = '%s_Rebinned_%i' % (name_h2ch, ri)
+
+          '''
+          Response axes:
+          ['p_{T}^{ch jet}', 'p_{T}^{jet, hadron}', 'obs^{ch}', 'obs^{hadron}']
+          as compared to the usual
+          ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+          '''
+          #det_pt_bin_array = array('d', self.theory_pt_bins)
+          det_pt_bin_array = array('d',np.arange(self.th_pt_min,self.th_pt_max+self.th_pt_inc,self.th_pt_inc))
+          tru_pt_bin_array = det_pt_bin_array
+          det_obs_bin_array = array('d', self.theory_obs_bins)
+          tru_obs_bin_array = det_obs_bin_array
+
+          if grooming_setting:
+            # Add bin for underflow value (tagging fraction)
+            det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
+            tru_obs_bin_array = det_obs_bin_array
+
+          n_dim = 4
+
+          self.histutils.rebin_thn( roounfold_filename, thn_h2ch, name_roounfold_thn , name_roounfold_h2ch, n_dim,
+            len(det_pt_bin_array )-1, det_pt_bin_array ,
+            len(det_obs_bin_array)-1, det_obs_bin_array,
+            len(tru_pt_bin_array )-1, tru_pt_bin_array ,
+            len(tru_obs_bin_array)-1, tru_obs_bin_array,
+            label,0,1, grooming_setting!=None )
+
+          f_resp = ROOT.TFile(roounfold_filename, 'READ')
+          roounfold_response_h2ch = f_resp.Get(name_roounfold_h2ch)
+          roounfold_thn_h2ch      = f_resp.Get(name_roounfold_thn )
+          f_resp.Close() 
+
+          setattr(self, name_roounfold_h2ch, roounfold_response_h2ch)
+
+          self.outfile.cd()
+          roounfold_thn_h2ch.Write()
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
@@ -282,6 +314,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
     for jetR in self.jetR_list:
 
      # Loop through subconfigurations to unfold
+     # (e.g. Standard_WTA, Standard_SD_1, ...)
      for i, subconfig in enumerate(self.obs_subconfig_list):
 
        obs_setting = self.obs_settings[i]
@@ -347,7 +380,8 @@ class TheoryFolding(run_analysis.RunAnalysis):
          label += '_'
          label += self.utils.grooming_label(grooming_setting)
 
-       pt_bins = array('d', self.theory_pt_bins)
+       #pt_bins = array('d', self.theory_pt_bins)
+       pt_bins = array('d',np.arange(self.th_pt_min,self.th_pt_max+self.th_pt_inc,self.th_pt_inc))
 
        # loop over response files (e.g. Pythia, Herwig, ...)
        for ri, response in enumerate(self.theory_response_files):
@@ -361,7 +395,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
 
          if do_MPI_corr:
            # Gotta make sure the histograms we will use for the correction have the proper binning
-           y_bins = array('d', self.theory_obs_bins[jetR][i])
+           y_bins = array('d', self.theory_obs_bins)
            if grooming_setting:
              y_bins = np.insert(y_bins, 0, -0.001)
            h2_mpi_off = self.histutils.rebin_th2(h2_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
@@ -515,6 +549,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
     outf.Close()
 
   #----------------------------------------------------------------------
+  '''
   def plot_parton_comp(self, jetR, obs_label, obs_setting, grooming_setting):
 
     label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
@@ -530,6 +565,8 @@ class TheoryFolding(run_analysis.RunAnalysis):
 
     n_obs_bins = len(self.theory_obs_bins) - 1
     obs_edges = self.theory_obs_bins
+
+    pt_bins = array('d',np.arange(self.th_pt_min,self.th_pt_max+self.th_pt_inc,self.th_pt_inc))
 
     # Make projections in pT bins at parton level
     for i, min_pt in list(enumerate(self.theory_pt_bins))[:-1]:
@@ -663,7 +700,7 @@ class TheoryFolding(run_analysis.RunAnalysis):
     hcent_p.GetXaxis().UnZoom()
     hmin_p.GetXaxis().UnZoom()
     hmax_p.GetXaxis().UnZoom()
-
+  '''
   #----------------------------------------------------------------------
   # Return maximum & minimum y-values of unfolded results in a subconfig list
   def get_max_min(self, name, overlay_list, maxbins):
