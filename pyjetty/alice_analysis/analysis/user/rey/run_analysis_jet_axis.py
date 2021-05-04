@@ -236,7 +236,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
     myPad.SetLeftMargin(0.2)
     myPad.SetTopMargin(0.07)
-    myPad.SetRightMargin(0.04)
+    myPad.SetRightMargin(0.05)
     myPad.SetBottomMargin(0.13)
     myPad.Draw()
     myPad.cd()
@@ -331,7 +331,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
           text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
+    #myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
+    myLegend = ROOT.TLegend(0.25,0.60,0.45,0.89)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
@@ -479,7 +480,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     pad1.SetLeftMargin(0.2)
     pad1.SetTopMargin(0.07)
-    pad1.SetRightMargin(0.04)
+    pad1.SetRightMargin(0.05)
     pad1.SetBottomMargin(0.13)
     if plot_ratio:
       pad1.SetBottomMargin(0.)
@@ -580,8 +581,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
             pad3.SetBottomMargin(0.4)
             pad2.SetLeftMargin(0.2)
             pad3.SetLeftMargin(0.2)
-            pad2.SetRightMargin(0.04)
-            pad3.SetRightMargin(0.04)
+            pad2.SetRightMargin(0.05)
+            pad3.SetRightMargin(0.05)
             pad2.SetTicks(0,1)
             pad3.SetTicks(0,1)
             pad2.Draw()
@@ -589,7 +590,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
             pad2.cd()
             myBlankHisto2 = myBlankHisto.Clone("myBlankHisto_C")
-            self.pretty_blank_histo(myBlankHisto2,xtitle,"#frac{Data}{PYTHIA}")
+            self.pretty_blank_histo(myBlankHisto2,xtitle,"#frac{Data}{PYTHIA}",0.61,1.45)
             myBlankHisto2.Draw()
 
             l1.Draw("same")
@@ -598,7 +599,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
             pad3.cd()
             myBlankHisto3 = myBlankHisto.Clone("myBlankHisto_C")
-            self.pretty_blank_histo(myBlankHisto3,xtitle,"#frac{Data}{HERWIG}")
+            self.pretty_blank_histo(myBlankHisto3,xtitle,"#frac{Data}{HERWIG}",0.61,1.45)
             myBlankHisto3.Draw()
 
             l1.Draw("same")
@@ -610,7 +611,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
             pad2.SetTopMargin(0)
             pad2.SetBottomMargin(0.4)
             pad2.SetLeftMargin(0.2)
-            pad2.SetRightMargin(0.04)
+            pad2.SetRightMargin(0.05)
             pad2.SetTicks(0,1)
             pad2.Draw()
             pad2.cd()
@@ -727,7 +728,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
         if 'sd' in grooming_setting:
           fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
-          text += ' (#it{f}_{tagged}^{data} = %3.3f)' % fraction_tagged 
+          text += ' (#it{f}_{t}^{data} = %3.3f)' % fraction_tagged 
 
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
         
