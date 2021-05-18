@@ -2,7 +2,7 @@
 """
 run_fold_theory.py
 Code to fold theory curves from a given to a desired 'level'
-Adapted from Ezra Lesser's code
+Adapted from Ezra Lesser's code by Rey Cruz-Torres (reynier@lbl.gov)
 """
 
 import sys
@@ -39,7 +39,7 @@ class TheoryFolding():
     # Initialize yaml config
     self.initialize_user_config()
 
-    print(self)
+    #print(self)
   
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -97,19 +97,43 @@ class TheoryFolding():
       # Creating a root file to store results
       outfilename = os.path.join( self.theory_dir , 'out_file.root' )
       self.outfile = ROOT.TFile(outfilename,'recreate')
-
+      # ------------
       print('Loading pT scale factors...')
       self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
+      # ------------
       print('Loading theory curves...')
       self.load_theory_curves()
+      # ------------
       print('Loading response matrix for folding theory predictions...')
       self.load_theory_response()
+      # ------------
       print("Folding theory histograms...")
       self.fold_theory()
+      # ------------
       print("Undoing some scalings...")
-      self.undo_scalings(self.do_mpi_scaling)
-
+      self.final_processing(self.do_mpi_scaling)
+      # ------------
+      # Closing the root file with all results from this code
       self.outfile.Close()
+
+  #---------------------------------------------------------------
+  # Loads pT scale factors from q/g fraction theory predictions
+  #---------------------------------------------------------------
+  def load_pt_scale_factors(self, filepath):
+
+    for i, jetR in enumerate(self.jetR_list):
+      full_path = os.path.join(filepath,'qg_fractions-ALICE-R%s.txt' % ((str)(jetR).replace('.','')) )
+      # Open file and save pT distribution
+      pt_li = None; val_li = None;
+      with open(full_path) as f:
+        lines = [line.split() for line in f.read().split('\n') if (line and line[0] != '#')]
+        pt_li = [int(float(line[0])) for line in lines]
+        val_li = [float(line[1]) + float(line[2]) for line in lines]
+
+      n_entries = len(val_li)
+      val_li_jetR = val_li[i*n_entries:(i+1)*n_entries]
+      pt_li_jetR = pt_li[i*n_entries:(i+1)*n_entries]
+      setattr(self, "pt_scale_factor_R%s" % jetR, (pt_li_jetR, val_li_jetR))
 
   #---------------------------------------------------------------
   # Load theory calculations
@@ -117,6 +141,10 @@ class TheoryFolding():
   def load_theory_curves(self):
     # The user needs to implement this function
     raise NotImplementedError('You must implement initialize_user_output_objects()!')
+
+    # The theory curves are given as 1/σ dσ/d(obs). Before doing the folding,
+    # we need to convert these quantities to dσ/d(obs). To do this, we scale
+    # the theory curves by scale factors (loaded in the previous function)
 
   #---------------------------------------------------------------
   # Linear interpolation
@@ -139,28 +167,20 @@ class TheoryFolding():
 
     # Loop over jet R
     for jetR in self.jetR_list:
-      # Loop through subconfigurations to unfold
-      # (e.g. Standard_WTA, Standard_SD_1, ...)
+      # Loop through subconfigurations to fold
+      # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
+      # beta = 1.5, 2, 3, ... in the angularities analysis)
       for i in range(0,len(self.obs_subconfig_list)):
 
         obs_setting = self.obs_settings[i]           # labels such as 'Standard_WTA'
         grooming_setting = self.grooming_settings[i] # grooming parameters
-
-        label = "R%s_" % (str(jetR).replace('.', ''))
-        label += self.subobs_label(obs_setting)
-        label += '_Scaled'
-
-        if grooming_setting:
-          label += '_'
-          label += self.utils.grooming_label(grooming_setting)
+        label = self.create_label( jetR , obs_setting , grooming_setting ) 
 
         # loop over response files (e.g. Pythia, Herwig, ...)
         for ri, response in enumerate(self.theory_response_files):
 
-          # Load response matrix to take input from full hadron to charged hadron level
+          # Load response matrix 
           name_RM = "hResponse_JetPt_" + self.observable + "_" + self.folding_type + "_" + label
-          print('Loading response matrix:',name_RM)
-
           thn = response.Get(name_RM)
           setattr(self, '%s_%i' % (name_RM, ri), thn)
 
@@ -170,9 +190,12 @@ class TheoryFolding():
 
           '''
           Response axes:
-          ['p_{T}^{ch jet}', 'p_{T}^{jet, hadron}', 'obs^{ch}', 'obs^{hadron}']
+          ['p_{T}^{final}', 'p_{T}^{initial}', 'obs^{final}', 'obs^{initial}']
+          e.g. ['p_{T}^{ch}', 'p_{T}^{h}', 'obs^{ch}', 'obs^{h}']
+          
           as compared to the usual
-          ['p_{T,det}', 'p_{T,truth}', '#lambda_{#beta,det}', '#lambda_{#beta,truth}']
+          ['p_{T}^{initial}', 'p_{T}^{final}', 'obs^{initial}', 'obs^{final}']
+          e.g. ['p_{T}^{det}', 'p_{T}^{truth}', 'obs^{det}', 'obs_{truth}']
           '''
           det_pt_bin_array = array('d', self.theory_pt_bins)
           tru_pt_bin_array = det_pt_bin_array
@@ -199,6 +222,7 @@ class TheoryFolding():
 
           setattr(self, name_roounfold_obj, roounfold_response)
 
+          # Save the response matrix to the root file, in case we want to check something later
           self.outfile.cd()
           roounfold_thn.Write()
 
@@ -209,21 +233,14 @@ class TheoryFolding():
 
     # Loop over jet R
     for jetR in self.jetR_list:
-
-     # Loop through subconfigurations to unfold
-     # (e.g. Standard_WTA, Standard_SD_1, ...)
+     # Loop through subconfigurations to fold
+     # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
+     # beta = 1.5, 2, 3, ... in the angularities analysis)
      for i, subconfig in enumerate(self.obs_subconfig_list):
 
        obs_setting = self.obs_settings[i]
        grooming_setting = self.grooming_settings[i]
-
-       label = "R%s_" % (str(jetR).replace('.', ''))
-       label += self.subobs_label(obs_setting)
-       label += '_Scaled'
-
-       if grooming_setting:
-         label += '_'
-         label += self.utils.grooming_label(grooming_setting)
+       label = self.create_label( jetR , obs_setting , grooming_setting )
 
        # Retrieve theory histograms to be folded
        th_hists = []
@@ -253,43 +270,34 @@ class TheoryFolding():
   #----------------------------------------------------------------------
   # Undoing some scalings that had been introduced before
   #----------------------------------------------------------------------
-  def undo_scalings(self,do_MPI_corr=True):
-    '''
-    Before doing the folding in 'fold_theory', the theory predictions were
-    scaled. This function takes care of reversing that scaling.
-    '''
+  def final_processing(self,do_MPI_corr=True):
+
     # Loop over jet R
     for jetR in self.jetR_list:
-
-     # Loop through subconfigurations to unfold
+     # Loop through subconfigurations to fold
+     # (e.g. Standard_WTA, Standard_SD_1, ... in the jet-axis analysis, or
+     # beta = 1.5, 2, 3, ... in the angularities analysis)
      for i, subconfig in enumerate(self.obs_subconfig_list):
 
        obs_setting = self.obs_settings[i]
        grooming_setting = self.grooming_settings[i]
- 
-       label = "R%s_" % (str(jetR).replace('.', ''))
-       label += self.subobs_label(obs_setting)
-       label += '_Scaled'
-       if grooming_setting:
-         label += '_'
-         label += self.utils.grooming_label(grooming_setting)
+       label = self.create_label( jetR , obs_setting , grooming_setting ) 
 
        pt_bins = array('d', self.theory_pt_bins)
 
        # loop over response files (e.g. Pythia, Herwig, ...)
        for ri, response in enumerate(self.theory_response_files):
          
-         # Grab the two histograms that will be used for the MPI correction
-         name_mpi_off = 'h_'+self.observable+'_JetPt_ch_'+label
-         name_mpi_on = 'h_'+self.observable+'_JetPt_ch_MPIon_'+label
-
-         print('Histogram MPI off:',name_mpi_off)
-         print('Histogram MPI on:' ,name_mpi_on )
-
-         h2_mpi_off = response.Get(name_mpi_off)
-         h2_mpi_on = response.Get(name_mpi_on)
-
+          # ----------------------------------------------------------------------------------------
+         # Preparing MPI correction
          if do_MPI_corr:
+           # Grab the two histograms that will be used for the MPI correction
+           name_mpi_off = 'h_'+self.observable+'_JetPt_ch_'+label
+           name_mpi_on = 'h_'+self.observable+'_JetPt_ch_MPIon_'+label
+
+           h2_mpi_off = response.Get(name_mpi_off)
+           h2_mpi_on = response.Get(name_mpi_on)
+
            # Gotta make sure the histograms we will use for the correction have the proper binning
            y_bins = array('d', self.theory_obs_bins)
            if grooming_setting:
@@ -337,32 +345,41 @@ class TheoryFolding():
 
              self.outfile.cd()
              h1_folded_hist.Write()
-             setattr(self,projection_name,h1_folded_hist)
+             setattr(self,projection_name,h1_folded_hist) 
 
+         # Do the loop backwards and find min and max histograms
+         for n_pt in range(0,len(self.final_pt_bins)-1):
+           histo_list = []
+           for sv in range(0,self.theory_scale_vars[jetR][i]):
+             projection_name = 'h1_folded_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             histo_list.append(getattr(self,projection_name))
+           hist_min, hist_max = self.min_max( histo_list )
+           self.outfile.cd()
+           hist_min.Write()
+           hist_max.Write()
+
+  #---------------------------------------------------------------
+  # Given a pair of bin-edge values, return their index
   #---------------------------------------------------------------
   def bin_position( self , list_pt_th , min_p , max_p ):
     min_b = list_pt_th.index(min_p)+1
     max_b = list_pt_th.index(max_p)
     return min_b, max_b
- 
-  #---------------------------------------------------------------
-  # Loads pT scale factors from q/g fraction theory predictions
-  #---------------------------------------------------------------
-  def load_pt_scale_factors(self, filepath):
 
-    for i, jetR in enumerate(self.jetR_list):
-      full_path = os.path.join(filepath,'qg_fractions-ALICE-R%s.txt' % ((str)(jetR).replace('.','')) ) 
-      # Open file and save pT distribution
-      pt_li = None; val_li = None;
-      with open(full_path) as f:
-        lines = [line.split() for line in f.read().split('\n') if (line and line[0] != '#')]
-        pt_li = [int(float(line[0])) for line in lines]
-        val_li = [float(line[1]) + float(line[2]) for line in lines]
- 
-      n_entries = len(val_li)
-      val_li_jetR = val_li[i*n_entries:(i+1)*n_entries]
-      pt_li_jetR = pt_li[i*n_entries:(i+1)*n_entries]
-      setattr(self, "pt_scale_factor_R%s" % jetR, (pt_li_jetR, val_li_jetR))
+  #---------------------------------------------------------------
+  # Put together a label commonly used by several functions in code
+  #---------------------------------------------------------------
+  def create_label(self,jetR,obs_setting,grooming_setting):
+
+    label = "R%s_" % (str(jetR).replace('.', ''))
+    label += self.subobs_label(obs_setting)
+    label += '_Scaled'
+
+    if grooming_setting:
+      label += '_'
+      label += self.utils.grooming_label(grooming_setting)
+
+    return label
 
   #---------------------------------------------------------------
   # Returns number proportional to shape of inclusive jet pT
@@ -388,59 +405,6 @@ class TheoryFolding():
     if k == -1:
       return a * np.log(ptmax / ptmin)
     return a * (ptmax**(k + 1) - ptmin**(k + 1)) / (k + 1)
-
-  #----------------------------------------------------------------------
-  def plot_theory_response(self, jetR, obs_label, obs_setting, grooming_setting,
-                           min_pt_truth, max_pt_truth, maxbin):
-
-    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
-    outf = ROOT.TFile(os.path.join(self.output_dir_theory, 'fTheoryResponseProj.root'), 'UPDATE')
-
-    for ri in range(len(self.theory_response_files)):
-      # Get histograms
-      thn_ch = getattr(self, "hResponse_theory_ch_%s_%i" % (label, ri))
-      thn_h = getattr(self, "hResponse_theory_h_%s_%i" % (label, ri))
-
-      # Make projections in pT bins at (charged-)/hadron level
-      thn_ch.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
-      thn_h.GetAxis(0).SetRangeUser(int(min_pt_truth), int(max_pt_truth))
-
-      #print(thn_ch.GetBinContent(array('i', [3, 3, 20, 20])))
-
-      hTheoryProjection_ch = thn_ch.Projection(2, 3)
-      hTheoryProjection_h = thn_h.Projection(2, 3)
-
-      #print(hTheoryProjection_ch.GetBinContent(20, 20))
-      #exit()
-
-      name_ch = "hResponse_theory_ch_%s_PtBin%i-%i_%s" % \
-                (label, min_pt_truth, max_pt_truth, self.theory_response_labels[ri])
-      name_h = "hResponse_theory_h_%s_PtBin%i-%i_%s" % \
-               (label, min_pt_truth, max_pt_truth, self.theory_response_labels[ri])
-
-      hTheoryProjection_ch.SetNameTitle(name_ch, name_ch)
-      hTheoryProjection_h.SetNameTitle(name_h, name_h)
-
-      # Save the histograms
-      output_dir = self.output_dir_theory
-      if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
-
-      text_h = str(min_pt_truth) + ' < #it{p}_{T, h jet} < ' + str(max_pt_truth)
-      text_ch = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth)
-      self.utils.plot_hist(hTheoryProjection_h, os.path.join(self.output_dir_theory, name_h+'.pdf'),
-                           'colz', False, True, text_h)
-      self.utils.plot_hist(hTheoryProjection_ch, os.path.join(self.output_dir_theory, name_ch+'.pdf'),
-                           'colz', False, True, text_ch)
-
-      hTheoryProjection_h.Write()
-      hTheoryProjection_ch.Write()
-
-      # Reset axes zoom in case histograms used later
-      thn_ch.GetAxis(0).UnZoom()
-      thn_h.GetAxis(0).UnZoom()
-
-    outf.Close()
 
   #----------------------------------------------------------------------
   # Extrapolate y-values for values in xlist_new given points (x,y) in xlist and ylist
@@ -518,7 +482,10 @@ class TheoryFolding():
 
     return yvals
 
-  # Where there are single values pos/neg between two neg/pos, interpolate point
+  #---------------------------------------------------------------
+  # Where there are single values pos/neg between two neg/pos,
+  # interpolate point
+  #---------------------------------------------------------------
   def fix_fluctuations(self,yvals):
  
     for i in range(1, len(yvals) - 1):
@@ -530,191 +497,32 @@ class TheoryFolding():
           yvals[i] = (yvals[i+1] + yvals[i-1]) / 2
 
     return yvals
+
   #---------------------------------------------------------------
-  '''
-  def plot_parton_comp(self, jetR, obs_label, obs_setting, grooming_setting):
-
-    label = "R%s_%s" % (str(jetR).replace('.', ''), str(obs_label).replace('.', ''))
-
-    # Directory to save the histograms
-    output_dir = os.path.join(self.output_dir_theory, "parton_comp")
-    if not os.path.exists(output_dir):
-      os.mkdir(output_dir)
-
-    hcent_p = getattr(self, "theory_cent_%s_%s_parton" % (self.observable, label))
-    hmin_p = getattr(self, "theory_min_%s_%s_parton" % (self.observable, label))
-    hmax_p = getattr(self, "theory_max_%s_%s_parton" % (self.observable, label))
-
-    n_obs_bins = len(self.theory_obs_bins) - 1
-    obs_edges = self.theory_obs_bins
-
-    pt_bins = array('d', self.theory_pt_bins)
-
-    # Make projections in pT bins at parton level
-    for i, min_pt in list(enumerate(self.theory_pt_bins))[:-1]:
-      max_pt = self.theory_pt_bins[i+1]
-
-      # Get the theory prediction
-      hcent_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
-      hmin_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
-      hmax_p.GetXaxis().SetRangeUser(int(min_pt), int(max_pt))
-
-      hcent_proj_p = hcent_p.ProjectionY()
-      hmin_proj_p = hmin_p.ProjectionY()
-      hmax_proj_p = hmax_p.ProjectionY()
-
-      # Fix normalization
-      hmin_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
-      hmax_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
-      hcent_proj_p.Scale(1/hcent_proj_p.Integral(), "width")
-
-      # Initialize canvas & pad for plotting
-      name = 'cTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
-      c = ROOT.TCanvas(name, name, 600, 450)
-      c.Draw()
-      c.cd()
-
-      name = 'pTheoryComp_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt, max_pt)
-      myPad = ROOT.TPad(name, name, 0, 0, 1, 1)
-      myPad.SetLeftMargin(0.2)
-      myPad.SetTopMargin(0.07)
-      myPad.SetRightMargin(0.04)
-      myPad.SetBottomMargin(0.13)
-      myPad.Draw()
-      myPad.cd()
-
-      # Find the max bin: the last bin where the angularity is 0
-      maxbin = hcent_proj_p.GetNbinsX()   # initialize
-      while hmax_proj_p.GetBinContent(maxbin) < 1e-3 and maxbin > 1:
-        maxbin -= 1
-
-      # Use blank histogram to initialize this range
-      bin_array = array('d', obs_edges[0:maxbin+1])
-      name = 'hTheoryComp_R{}_{}_{}-{}_Blank'.format(jetR, obs_label, min_pt, max_pt)
-      myBlankHisto = ROOT.TH1F(name, name, maxbin, bin_array)
-      myBlankHisto.SetNdivisions(505)
-      myBlankHisto.SetXTitle(self.xtitle)
-      myBlankHisto.GetXaxis().SetTitleOffset(1.02)
-      myBlankHisto.GetXaxis().SetTitleSize(0.055)
-      myBlankHisto.SetYTitle(self.ytitle)
-      myBlankHisto.GetYaxis().SetTitleOffset(1.1)
-      myBlankHisto.GetYaxis().SetTitleSize(0.055)
-      myBlankHisto.SetMinimum(0.)
-      myBlankHisto.SetMaximum(1.7*hmax_proj_p.GetMaximum())
-      myBlankHisto.Draw()
-
-      x = array('d', [round(hcent_proj_p.GetXaxis().GetBinCenter(i), 5) for i in range(1, maxbin+1)])
-      y = array('d', [hcent_proj_p.GetBinContent(i) for i in range(1, maxbin+1)])
-      xerrup = array('d', [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)] + [0])
-      xerrdn = array('d', [0] + [(x[i+1] - x[i]) / 2. for i in range(maxbin-1)])
-      yerrup = array('d', [hmax_proj_p.GetBinContent(i)-y[i-1] for i in range(1, maxbin+1)])
-      yerrdn = array('d', [y[i-1]-hmin_proj_p.GetBinContent(i) for i in range(1, maxbin+1)])
-      h_theory = ROOT.TGraphAsymmErrors(maxbin, x, y, xerrdn, xerrup, yerrdn, yerrup)
-      color = self.ColorArray[4]
-      h_theory.SetFillColorAlpha(color, 0.25)
-      h_theory.SetLineColor(color)
-      h_theory.SetLineWidth(3)
-      h_theory.Draw('L 3 same')
-
-      h_resp_list = []
-      for ri in range(len(self.theory_response_files)):
-        # Get event generator histogram
-        thn = getattr(self, "hResponse_theory_ch_%s_%i" % (label, ri))
-
-        # Get the response matrix prediction
-        thn.GetAxis(1).SetRangeUser(int(min_pt), int(max_pt))
-        h_response_projection = thn.Projection(3)
-        name = "hTheoryComp_p_%s_PtBin%i-%i_%s" % \
-                  (label, min_pt, max_pt, self.theory_response_labels[ri])
-        h_response_projection.SetNameTitle(name, name)
-        h_response_projection.SetDirectory(0)
-
-        # Rescale by integral for correct normalization
-        h_response_projection.Scale(1/h_response_projection.Integral(), "width")
-
-        color = self.ColorArray[4+1+ri]
-        h_response_projection.SetLineColor(color)
-        h_response_projection.SetLineWidth(3)
-        h_response_projection.Draw('L hist same')
-        h_resp_list.append(h_response_projection)
-
-        # Reset thn range in case used later
-        thn.GetAxis(1).UnZoom()
-
-      text_latex = ROOT.TLatex()
-      text_latex.SetNDC()
-      text_xval = 0.61
-      text = 'ALICE {}'.format(self.figure_approval_status)
-      text_latex.DrawLatex(text_xval, 0.87, text)
-
-      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
-      text_latex.SetTextSize(0.045)
-      text_latex.DrawLatex(text_xval, 0.8, text)
-
-      text = "anti-#it{k}_{T} jets,   #it{R} = %s" % str(jetR)
-      text_latex.DrawLatex(text_xval, 0.73, text)
-
-      text = str(min_pt) + ' < #it{p}_{T,jet}^{parton} < ' + str(max_pt) + ' GeV/#it{c}'
-      text_latex.DrawLatex(text_xval, 0.66, text)
-
-      text = '| #it{#eta}_{jet}| < %s' % str(0.9 - jetR)
-      subobs_label = self.utils.formatted_subobs_label(self.observable)
-      if subobs_label:
-        text += ',   %s = %s' % (subobs_label, obs_setting)
-      delta = 0.07
-      text_latex.DrawLatex(text_xval, 0.66-delta, text)
-
-      myLegend = ROOT.TLegend(0.27, 0.7, 0.55, 0.9)
-      self.utils.setup_legend(myLegend, 0.035)
-      myLegend.AddEntry(h_theory, 'NLO+NLL', 'lf')
-      for rl, l in enumerate(self.theory_response_labels):
-        myLegend.AddEntry(h_resp_list[rl], l, 'lf')
-      myLegend.Draw()
-
-      name = 'hTheoryRatio_R{}_{}_{}-{}{}'.format(
-        self.utils.remove_periods(jetR), obs_label,
-        int(min_pt), int(max_pt), self.file_format)
-      outputFilename = os.path.join(output_dir, name)
-      c.SaveAs(outputFilename)
-      c.Close()
-
-    # Reset parton-level range in case used later
-    hcent_p.GetXaxis().UnZoom()
-    hmin_p.GetXaxis().UnZoom()
-    hmax_p.GetXaxis().UnZoom()
-  '''
-  #----------------------------------------------------------------------
-  # Return maximum & minimum y-values of unfolded results in a subconfig list
-  def get_max_min(self, name, overlay_list, maxbins):
-
-    total_min = 1e10
-    total_max = -1e10
-
-    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+  # Given a list of histograms, return two histograms with the min
+  # and max histograms
+  #---------------------------------------------------------------
+  def min_max( self , histo_list ):
+    nHist = len(histo_list)
+    nBins = histo_list[0].GetNbinsX()
     
-      if subconfig_name not in overlay_list:
-        continue
+    hist_min = histo_list[0].Clone()
+    hist_min.SetName(hist_min.GetName()+'_min')
 
-      obs_setting = self.obs_settings[i]
-      grooming_setting = self.grooming_settings[i]
-      obs_label = self.utils.obs_label(obs_setting, grooming_setting)
-      maxbin = maxbins[i]
-      
-      h = getattr(self, name.format(obs_label))
-      if 'SD' in obs_label:
-        content = [ h.GetBinContent(j) for j in range(2, maxbin+2) ]
-      else:
-        content = [ h.GetBinContent(j) for j in range(1, maxbin+1) ]
-
-      min_val = min(content)
-      if min_val < total_min:
-        total_min = min_val
-      max_val = max(content)
-      if max_val > total_max:
-        total_max = max_val
-
-        
-    return (total_max, total_min)
+    hist_max = histo_list[0].Clone()
+    hist_max.SetName(hist_max.GetName()+'_max')
+    
+    for b in range(0,nBins):
+        bin_content = []
+        for h in range(0,nHist):
+            bin_content.append(histo_list[h].GetBinContent(b+1))
+        min_cont = min(bin_content)
+        max_cont = max(bin_content)
+    
+        hist_min.SetBinContent(b+1,min_cont)
+        hist_max.SetBinContent(b+1,max_cont)
+    
+    return hist_min, hist_max
 
   #----------------------------------------------------------------------
   def subobs_label( self , subobs ):
