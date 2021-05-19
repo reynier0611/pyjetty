@@ -103,7 +103,7 @@ class TheoryFolding():
   #---------------------------------------------------------------
   def run_theory_folding(self):
       # Creating a root file to store results
-      outfilename = os.path.join( self.theory_dir , 'out_file.root' )
+      outfilename = os.path.join( self.theory_dir , 'folded_scet_calculations.root' )
       self.outfile = ROOT.TFile(outfilename,'recreate')
       # ------------
       print('Loading pT scale factors...')
@@ -366,15 +366,22 @@ class TheoryFolding():
            # Create a graph out of these histograms
            name_central = 'h1_folded_%s_R%s_%s_%i_sv0_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
            h_central = getattr(self,name_central)
-           graph = self.histo_to_graph(h_central,hist_min,hist_max)
-           
+           graph = self.histo_to_graph(h_central,hist_min,hist_max)           
            name_graph = 'g_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
            graph.SetName(name_graph)
+
+           graph_min = ROOT.TGraph(hist_min)
+           graph_min.SetName('g_min_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+
+           graph_max = ROOT.TGraph(hist_max)
+           graph_max.SetName('g_max_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
            self.outfile.cd()
            hist_min.Write()
            hist_max.Write()
            graph.Write()
+           graph_min.Write()
+           graph_max.Write()
 
   #---------------------------------------------------------------
   # Given a pair of bin-edge values, return their index
