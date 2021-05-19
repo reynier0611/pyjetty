@@ -1,0 +1,175 @@
+#! /usr/bin/env python
+
+"""
+Code to do theory folding in order to compare to the measured distributions
+The class 'TheoryFolding' below inherits from the 'TheoryFolding' class in:
+pyjetty/alice_analysis/analysis/user/substructure/run_fold_theory.py
+"""
+
+import sys
+import os
+import argparse
+from array import *
+import numpy as np
+import ROOT
+ROOT.gSystem.Load("$HEPPY_DIR/external/roounfold/roounfold-current/lib/libRooUnfold.so")
+import yaml
+
+from pyjetty.alice_analysis.analysis.user.substructure import run_fold_theory
+
+# Load pyjetty ROOT utils
+ROOT.gSystem.Load('libpyjetty_rutil')
+
+# Prevent ROOT from stealing focus when plotting
+ROOT.gROOT.SetBatch(True)
+
+################################################################
+################################################################
+################################################################
+class TheoryFolding(run_fold_theory.TheoryFolding):
+
+  def load_theory_curves(self):
+    self.theory_obs_points = {}
+    self.theory_scale_vars = {}
+
+    # Loop over each jet R specified in the config file
+    for jetR in self.jetR_list:
+      th_obs_R = []
+      scale_var = []
+
+      # Loop through subconfigurations to fold (e.g. in the jet-axis analysis there Standard_WTA, Standard_SD_1, ...)
+      for i in range(0,len(self.obs_subconfig_list)):
+        path_to_theory = os.path.join(self.theory_dir,self.obs_settings[i])
+
+        # Assume for a given subconfiguration all files have the same observable binning and only open the first file
+        pt_min = self.theory_pt_bins[0]
+        pt_max = self.theory_pt_bins[1]
+        th_fname = 'R_%s_pT_%i-%i.dat' % (str(jetR).replace('.', '') , int(pt_min), int(pt_max) )
+        th_fname = os.path.join( path_to_theory , th_fname )
+
+        # Open theory file and load its contents
+        with open( th_fname ) as f:
+          #lines = [line for line in f.read().split('\n') if line] #[0] != '#']
+          lines = [line for line in f.read().split('\n') if line[0] != '#']
+
+        th_obs = [float(line.split()[0]) for line in lines]
+        th_obs_R.append(th_obs)
+
+        n_scale_variations = len(lines[0].split())-1 # number of scale variations
+        scale_var.append(n_scale_variations)
+
+        # Up to this point we were gathering some information about the theory files:
+        # (number of scale variations and observable granularity)
+
+        obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
+        grooming_setting = self.grooming_settings[i]  # grooming parameters
+
+        pt_bins = array('d', self.theory_pt_bins)
+        obs_points = array('d', th_obs )               # points provided in the theory calculation
+        obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
+
+        if grooming_setting:
+          # Add bin for underflow value (tagging fraction)
+          obs_bins = np.insert(obs_bins, 0, -0.001)
+
+        obs_width = np.subtract(obs_bins[1:],obs_bins[:-1])
+
+        # -----------------------------------------------------        
+        # Create histograms where theory curves will be stored
+        th_hists_no_scaling = []
+        th_hists = []
+        hist_names = []
+
+        # Loop over all scale variations
+        for sv in range(0,n_scale_variations):
+          hist_name = 'h2_th_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
+          if grooming_setting:
+            hist_name += '_'
+            hist_name += self.utils.grooming_label(grooming_setting)
+          hist_name_no_scaling = hist_name + '_no_scaling'
+          th_hist = ROOT.TH2D(hist_name,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+          th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+
+          th_hists.append(th_hist)
+          hist_names.append(hist_name)
+          th_hists_no_scaling.append(th_hist_no_scaling)
+
+        # -----------------------------------------------------
+        # opening theory file by file and fill histograms
+        th_path = os.path.join(self.theory_dir,obs_setting)
+
+        # loop over pT bins
+        for p, pt in enumerate(pt_bins[:-1]):
+          pt_min = self.theory_pt_bins[p]
+          pt_max = self.theory_pt_bins[p+1]
+
+          # Get scale factor for this pT bin.
+          # This reverses the self-normalization of 1/sigma for correct pT scaling when doing projections onto the y-axis.
+          scale_f = self.pt_scale_factor_jetR(pt,pt_bins[p+1],jetR)
+
+          # load theory file, grab the data, and fill histograms with it
+          th_file = 'R_%s_pT_%i-%i.dat' % ( (str)(jetR).replace('.','') , (int)(pt_min) , (int)(pt_max) )
+          th_file = os.path.join(th_path,th_file)
+
+          with open( th_file ) as f:
+
+            lines = [line for line in f.read().split('\n') if line[0] != '#']
+
+            x_val = [float(line.split()[0]) for line in lines]
+
+            # loop over scale variations and fill histograms
+            for sv in range(0,n_scale_variations):
+              y_val_n = [float(line.split()[sv+1]) for line in lines]
+
+              # Interpolate the given values and return the value at the requested bin center
+              y_val_bin_ctr = self.interpolate_values_linear(x_val,y_val_n,obs_bins)
+
+              # Save content into histogram before any scaling has been applied (to compare to the theory curves and make sure everything went fine)
+              for ob in range(0,len(obs_bins)-1):
+                th_hists_no_scaling[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
+
+              # Multiply by bin width and scale with pT-dependent factor
+              y_val_bin_ctr = np.multiply(y_val_bin_ctr,obs_width)
+              integral_y_val_bin_ctr = sum(y_val_bin_ctr)
+              y_val_bin_ctr = [ val * scale_f / integral_y_val_bin_ctr for val in y_val_bin_ctr ]
+
+              # Save scaled content into the histograms
+              for ob in range(0,len(obs_bins)-1):
+                th_hists[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
+
+          f.close()
+
+        # -----------------------------------------------------
+        # Setting the filled histograms as attributes
+        self.outfile.cd()
+        for sv in range(0,n_scale_variations):
+          setattr(self,hist_names[sv],th_hists[sv])
+          th_hists_no_scaling[sv].Write()
+          th_hists[sv].Write()
+
+      self.theory_obs_points[jetR] = th_obs_R
+      self.theory_scale_vars[jetR] = scale_var
+
+#----------------------------------------------------------------------
+if __name__ == '__main__':
+
+  # Define arguments
+  parser = argparse.ArgumentParser(description='Folding theory predictions')
+  parser.add_argument('-c', '--configFile', action='store',
+                      type=str, metavar='configFile',
+                      default='analysis_config.yaml',
+                      help='Path of config file for analysis')
+
+  # Parse the arguments
+  args = parser.parse_args()
+
+  print('Configuring...')
+  print('configFile: \'{0}\''.format(args.configFile))
+
+  # If invalid configFile is given, exit
+  if not os.path.exists(args.configFile):
+    print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+    sys.exit(0)
+
+  analysis = TheoryFolding(config_file = args.configFile)
+  analysis.run_theory_folding()

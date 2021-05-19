@@ -354,9 +354,19 @@ class TheoryFolding():
              projection_name = 'h1_folded_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
              histo_list.append(getattr(self,projection_name))
            hist_min, hist_max = self.min_max( histo_list )
+
+           # Create a graph out of these histograms
+           name_central = 'h1_folded_%s_R%s_%s_%i_sv0_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           h_central = getattr(self,name_central)
+           graph = self.histo_to_graph(h_central,hist_min,hist_max)
+           
+           name_graph = 'g_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           graph.SetName(name_graph)
+
            self.outfile.cd()
            hist_min.Write()
            hist_max.Write()
+           graph.Write()
 
   #---------------------------------------------------------------
   # Given a pair of bin-edge values, return their index
@@ -523,6 +533,35 @@ class TheoryFolding():
         hist_max.SetBinContent(b+1,max_cont)
     
     return hist_min, hist_max
+
+  #---------------------------------------------------------------
+  # Given a central, min, and max histograms, return a graph
+  #---------------------------------------------------------------
+  def histo_to_graph(self,hc,hmin,hmax):
+    tlx = []
+    tly = []
+    tl_min = []
+    tl_max = []
+    
+    nBins = hc.GetNbinsX()
+    listofzeros = [0] * nBins
+ 
+    for b in range(0,nBins):
+      tlx.append(hc.GetXaxis().GetBinCenter(b+1))
+      cent = hc.GetBinContent(b+1)
+      tly.append(cent)
+      tl_min.append(cent-hmin.GetBinContent(b+1))
+      tl_max.append(hmax.GetBinContent(b+1)-cent)
+    
+    lx = array('d',tlx)
+    ly = array('d',tly)
+    l_min = array('d',tl_min)
+    l_max = array('d',tl_max)
+    l_0 = array('d',listofzeros) 
+
+    graph = ROOT.TGraphAsymmErrors(nBins,lx,ly,l_0,l_0,l_min,l_max)
+    
+    return graph 
 
   #----------------------------------------------------------------------
   def subobs_label( self , subobs ):
