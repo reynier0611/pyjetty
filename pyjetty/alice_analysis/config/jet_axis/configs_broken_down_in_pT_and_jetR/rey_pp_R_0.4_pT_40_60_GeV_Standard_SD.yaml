@@ -12,7 +12,7 @@ jet_axis:
 
   common_settings:
     xtitle: '#it{#DeltaR}_{axis}'
-    ytitle: '#frac{1}{#it{N}_{jets}} #frac{d#it{N}}{d#DeltaR_{axis}}'
+    ytitle: '#frac{1}{#it{N}} #frac{d#it{N}}{d#it{#DeltaR}_{axis}}'
     pt_bins_reported: [40, 60]
     plot_overlay_list:
       - ['config2' , 'config3' , 'config4' , 'config5' ]
@@ -122,7 +122,7 @@ force_rebin: False
 do_systematics: True
 do_plot_final_result: True
 do_plot_performance: True
-figure_approval_status: 'Work in Progress'
+figure_approval_status: 'Preliminary'
 
 # List of which systematics to perform
 # Options: [main, trkeff, prior1, prior2, truncation, binning]

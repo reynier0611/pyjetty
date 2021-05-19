@@ -1,5 +1,5 @@
 # Processing parameters
-jetR: [0.2,0.4,0.8]
+jetR: [0.2,0.4]
 
 # For extra verbose output in some functions
 debug_level: 0
@@ -20,25 +20,67 @@ jet_axis:
       beta: 0
 
   config3:
+    axis: 'Standard_SD_2'
+    SoftDrop:
+      zcut: 0.1
+      beta: 1
+
+  config4:
+    axis: 'Standard_SD_3'
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config5:
+    axis: 'Standard_SD_4'
+    SoftDrop:
+      zcut: 0.1
+      beta: 3
+
+  config6:
+    axis: 'Standard_SD_6'
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+
+  config7:
+    axis: 'Standard_SD_10'
+    SoftDrop:
+      zcut: 0.3
+      beta: 1
+
+  config8:
     axis: 'WTA_SD_1'
     SoftDrop:
       zcut: 0.1
       beta: 0
 
-  config4:
-    axis: 'Standard_SD_2'
-    SoftDrop:
-      zcut: 0.3
-      beta: 0
-
-  config5:
+  config9:
     axis: 'WTA_SD_2'
     SoftDrop:
-      zcut: 0.3
-      beta: 0
+      zcut: 0.1
+      beta: 1
 
-  config6:
-    axis: 'Standard_SD_3'
+  config10:
+    axis: 'WTA_SD_3'
+    SoftDrop:
+      zcut: 0.1
+      beta: 2
+
+  config11:
+    axis: 'WTA_SD_4'
     SoftDrop:
       zcut: 0.1
       beta: 3
+
+  config12:
+    axis: 'WTA_SD_6'
+    SoftDrop:
+      zcut: 0.2
+      beta: 1
+
+  config13:
+    axis: 'WTA_SD_10'
+    SoftDrop:
+      zcut: 0.3
+      beta: 1

@@ -675,6 +675,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
   # If option='det', plot data and MC-det projections for fixed pt-det
   # If option='both', plot data, MC-det, and MC-truth for fixed pt-det
   def plot_obs_projection(self, hRM, hObs_JetPt, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt, max_pt, option='truth'):
+    normalize_to_data = False
 
     ytitle = '#frac{{1}}{{N}} #frac{{dN}}{{d{}}}'.format(xtitle)
     
@@ -705,8 +706,11 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     hObs_det = hRM.Projection(2)
     hObs_det.SetName('hObs_det_{}'.format(obs_label))
     hObs_det.GetYaxis().SetTitle(ytitle)
-    if option == 'both':
+    if option == 'both' or option == 'truth':
       hObs_det.GetXaxis().SetTitle(xtitle)
+    if option == 'det':
+      hObs_det.GetXaxis().SetTitle(xtitle+'^{det}')
+
     hObs_det.SetLineColor(2)
     hObs_det.SetLineWidth(3)
     self.scale_by_integral(hObs_det)
@@ -736,11 +740,15 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
       hObs_data.SetMarkerColor(1)
       hObs_data.SetLineColor(1)
       hObs_data.SetMarkerSize(1)
-      self.scale_by_integral(hObs_data)
+      if not normalize_to_data:
+        self.scale_by_integral(hObs_data)
       hObs_data.Rebin(rebin_val_data)
       hObs_data.Scale(1., 'width')
       if grooming_setting and 'sd' in grooming_setting:
         hObs_data.GetXaxis().SetRange(0, hObs_data.GetNbinsX())
+
+      if normalize_to_data:
+        hObs_det.Scale(hObs_data.Integral())
 
     # Draw histogram
     c = ROOT.TCanvas('c','c: hist',600,450)
@@ -752,7 +760,7 @@ class PlottingUtils(analysis_utils_obs.AnalysisUtils_Obs):
     myPad.SetRightMargin(0.04)
     myPad.SetBottomMargin(0.13)
     #if 'Standard_SD' in obs_setting:
-    logy = True
+    logy = True*('Standard_SD' in obs_setting)
     if logy:
       myPad.SetLogy()
     myPad.Draw()

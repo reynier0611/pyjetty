@@ -1,4 +1,4 @@
-OUTDIR="round_71"
+OUTDIR="round_102"
 
 CONFIGDIR="/home/rey/pyjetty/pyjetty/alice_analysis/config/jet_axis/configs_broken_down_in_pT_and_jetR/"
 CONFIGCOPY=$CONFIGDIR$OUTDIR
@@ -14,7 +14,7 @@ fi
 for R in 0.4 #0.2
 do
 	# loop over the pT bins being considered
-	for pT in "20_40" "40_60" "60_80" "80_100" "20_100"
+	for pT in "20_40" "40_60" "60_80" "80_100" #"20_100"
 	do
 		# loop over types of jet axes
 		for ax in "Standard_SD" "WTA"
@@ -40,16 +40,22 @@ do
 			# Move all the resulting directories to $name
 			for folder in "final_results" "main" "performance" "prior1" "prior2" "systematics" "trkeff" "truncation" "unfolding_tests" "fastsim_generator0" "fastsim_generator1" "binning"
 			do
-				mv $folder $name
+				if [[ -e $folder ]]; then
+					mv $folder $name
+				fi
 			done
 
-			cd $CODEPATH
+			goana
 		done
 	done
 done
 
-cd $OUTPATH
+goout
 cd jet_axis/
-mkdir $OUTDIR
+
+if [[ ! -e $OUTDIR ]]; then
+	mkdir $OUTDIR
+fi
+
 mv new_* $OUTDIR
-cd $CODEPATH
+goana

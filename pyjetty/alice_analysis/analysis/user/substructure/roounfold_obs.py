@@ -155,7 +155,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
         n_obs_bins_truth = len(obs_bins_truth) - 1
         det_obs_bin_array = array('d',obs_bins_det)
         truth_obs_bin_array = array('d',obs_bins_truth)
-        
+
         # For SD, fill underflow bin to include untagged fraction in the unfolding
         # If underflow is activated, create a new underflow bin for the observable
         if grooming_setting:
@@ -455,7 +455,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.setup_legend(leg,0.04)
 
     # this will be used in the case of 'stat_uncert' to determine whether we want to plot fractional uncertainty or absolute
-    fractional=False
+    fractional=True
 
     # Select final regularization parameter
     if self.use_max_reg_param:
@@ -521,8 +521,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
       # Create empty histogram for plotting superimposed results of each n_iter
       if i == 1 or (i == 2 and option == 'ratio'):
-        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',
-                                 n_bins_truth, truth_bin_array)
+        myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',n_bins_truth, truth_bin_array)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.SetXTitle(self.xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
@@ -539,7 +538,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
             myBlankHisto.SetMinimum(0.)
             myBlankHisto.SetYTitle('statistical uncertainty (%)')
           else:
-            myBlankHisto.SetMaximum(h.GetMaximum()*1.6)
+            myBlankHisto.SetMaximum(40)
             myBlankHisto.SetMinimum(0.)
             myBlankHisto.SetYTitle('statistical uncertainty')
         myBlankHisto.Draw("E")
@@ -777,7 +776,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     self.utils.plot_hist(hKinematicEfficiency, outf_name, 'colz')
 
     # Save kinematic efficiency as class member
-    setattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label), hKinematicEfficiency)
+    setattr(self, 'hKinematicEfficiency_R{}_{}'.format(jetR, obs_label), hKinematicEfficiency) 
 
     # Plot 1D kinematic efficiency
     self.plot_kinematic_efficiency_projections(hKinematicEfficiency, jetR, obs_label,
@@ -787,7 +786,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
   # Plot kinematic efficiency projections for various pt slices
   #################################################################################################
   def plot_kinematic_efficiency_projections(self, hKinematicEfficiency2D, jetR,
-                                            obs_label, obs_setting, grooming_setting):
+                                            obs_label, obs_setting, grooming_setting ):
 
     self.utils.set_plotting_options()
     ROOT.gROOT.ForceStyle()
@@ -807,6 +806,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     n_bins_truth = getattr(self, 'n_bins_truth_{}'.format(obs_label))
     truth_bin_array = getattr(self, 'truth_bin_array_{}'.format(obs_label))
+
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_bins_truth, truth_bin_array)
     myBlankHisto.SetNdivisions(505)
     myBlankHisto.SetXTitle(self.xtitle)
@@ -815,6 +815,7 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
     myBlankHisto.SetMaximum(1.2)
     min = 0.7
     myBlankHisto.SetMinimum(min)
+
     myBlankHisto.Draw("E")
 
     leg = ROOT.TLegend(0.6,0.65,0.72,0.92)
@@ -874,10 +875,20 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
       text_latex.DrawLatex(0.25, 0.71, text)
 
     line = ROOT.TLine(truth_bin_array[0], 1, truth_bin_array[-1], 1)
-    line.SetLineColor(920+2)
-    line.SetLineStyle(2)
-    line.SetLineWidth(4)
+    line.SetLineColor(1)
+    line.SetLineStyle(1)
+    line.SetLineWidth(3)
     line.Draw()
+
+    line90 = ROOT.TLine(truth_bin_array[0], .90, truth_bin_array[-1], .90)
+    line90.SetLineColor(920+2)
+    line90.SetLineStyle(2)
+    line90.Draw()
+
+    line80 = ROOT.TLine(truth_bin_array[0], .80, truth_bin_array[-1], .80)
+    line80.SetLineColor(920+2)
+    line80.SetLineStyle(2)
+    line80.Draw()
 
     output_dir = getattr(self, 'output_dir_KinematicEfficiency')
     outf_name = 'hKinematicEfficiency_R{}_{}{}'.format(self.utils.remove_periods(jetR),
@@ -975,6 +986,9 @@ class Roounfold_Obs(analysis_base.AnalysisBase):
 
     hResponse_Obs_Normalized.GetXaxis().SetNdivisions(107)
     hResponse_Obs_Normalized.GetYaxis().SetNdivisions(107)
+
+    hResponse_Obs_Normalized.GetXaxis().SetTitle(self.xtitle+"^{det}")
+    hResponse_Obs_Normalized.GetYaxis().SetTitle(self.xtitle+"^{truth}")
 
     if title != '':
       text = '#splitline{' + title + '}{' + text + '}'

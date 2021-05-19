@@ -208,9 +208,13 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     for bin in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[bin]
       max_pt_truth = self.pt_bins_reported[bin+1]
-      
+      maxbin = None
+      maxbin = self.obs_max_bins(obs_label)[bin]
+
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
-      
+     
+      self.plot_RM_slices( jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth , maxbin )
+ 
       # Fill tagging fraction
       if grooming_setting and 'sd' in grooming_setting:
         fraction_tagged = getattr(self, 'tagging_fraction_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth))
@@ -332,7 +336,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           text_latex.DrawLatex(0.57, 0.52-delta, text)
 
     #myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
-    myLegend = ROOT.TLegend(0.25,0.60,0.45,0.89)
+    myLegend = ROOT.TLegend(0.25,0.60,0.45,0.9)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
@@ -452,12 +456,13 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     for bin in range(0, len(self.pt_bins_reported) - 1):
       min_pt_truth = self.pt_bins_reported[bin]
       max_pt_truth = self.pt_bins_reported[bin+1]
+      maxbins = [self.obs_max_bins(obs_label)[bin] for obs_label in self.obs_labels]
 
       # Plot PYTHIA
-      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=True, plot_ratio = True)
+      self.plot_observable_overlay_subconfigs(i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, maxbins, plot_pythia=True, plot_ratio = True)
 
   #----------------------------------------------------------------------
-  def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, plot_pythia=False, plot_nll=False, plot_ratio=False):
+  def plot_observable_overlay_subconfigs(self, i_config, jetR, overlay_list, min_pt_truth, max_pt_truth, maxbins, plot_pythia=False, plot_nll=False, plot_ratio=False):
     
     name = 'cResult_overlay_R{}_allpt_{}-{}'.format(jetR, min_pt_truth, max_pt_truth)
 
@@ -479,7 +484,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       pad1 = ROOT.TPad('myPad','The pad',0,0  ,1,1)
 
     pad1.SetLeftMargin(0.2)
-    pad1.SetTopMargin(0.07)
+    pad1.SetTopMargin(0.06)
     pad1.SetRightMargin(0.05)
     pad1.SetBottomMargin(0.13)
     if plot_ratio:
@@ -488,7 +493,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     pad1.Draw()
     pad1.cd()
 
-    myLegend = ROOT.TLegend(0.25,0.55,0.61,0.90)
+    myLegend = ROOT.TLegend(0.25,0.55,0.61,0.93)
     self.utils.setup_legend(myLegend,0.04)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
@@ -502,6 +507,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       obs_setting = self.obs_settings[i]
       grooming_setting = self.grooming_settings[i]
       obs_label = self.utils.obs_label(obs_setting, grooming_setting)
+      maxbin = maxbins[i]
       
       if subconfig_name == overlay_list[0]:
         marker = 20
@@ -512,19 +518,19 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         marker_pythia = marker+4
         color = 62
       elif subconfig_name == overlay_list[2]:
-        marker = 22
+        marker = 33
         marker_pythia = marker+4
         color = 2
       elif subconfig_name == overlay_list[3]:
-        marker = 23
+        marker = 34
         marker_pythia = 32
         color = 8
       elif subconfig_name == overlay_list[4]:
-        marker = 33
+        marker = 24
         marker_pythia = 27
         color = 92
       else:
-        marker = 29
+        marker = 25
         marker_pythia = 30
         color = 50
 
@@ -536,13 +542,22 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(color)
-      
-      h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+
+      name_sys = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth)      
+      h_sys = getattr(self, name_sys)
       h_sys.SetLineColor(0)
       h_sys.SetFillColor(color)
       h_sys.SetFillColorAlpha(color, 0.3)
       h_sys.SetFillStyle(1001)
       h_sys.SetLineWidth(0)
+      h_sys.SetMarkerSize(1.3)
+      h_sys.SetMarkerStyle(marker)
+      h_sys.SetMarkerColor(color)
+
+      if grooming_setting and maxbin:
+        h = self.truncate_hist(getattr(self, name), maxbin+1, name+'_trunc')
+      else:
+        h = self.truncate_hist(getattr(self, name), maxbin, name+'_trunc')
       
       if subconfig_name == overlay_list[0]:
 
@@ -552,6 +567,9 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         ytitle = getattr(self, 'ytitle')
         xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
         xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+        if maxbin: 
+            xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][maxbin]
+
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(108)
         myBlankHisto.GetXaxis().SetTitleSize(0.085)
@@ -561,7 +579,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         myBlankHisto.SetMaximum(100*ymax)
         myBlankHisto.SetMinimum(0.)
         if plot_ratio:
-          myBlankHisto.SetMinimum(6e-2) # Don't draw 0 on top panel 
+          myBlankHisto.SetMinimum(3e-2) # Don't draw 0 on top panel 
           myBlankHisto.GetYaxis().SetTitleSize(0.075)
           myBlankHisto.GetYaxis().SetTitleOffset(1.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -594,8 +612,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
             myBlankHisto2.Draw()
 
             l1.Draw("same")
-            b10.Draw("same")
-            b20.Draw("same")
+            #b10.Draw("same")
+            #b20.Draw("same")
 
             pad3.cd()
             myBlankHisto3 = myBlankHisto.Clone("myBlankHisto_C")
@@ -603,8 +621,8 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
             myBlankHisto3.Draw()
 
             l1.Draw("same")
-            b10.Draw("same")
-            b20.Draw("same")
+            #b10.Draw("same")
+            #b20.Draw("same")
 
           else:
             pad2 = ROOT.TPad("pad2", "pad2", 0, 0.02, 1, 0.3)
@@ -622,12 +640,17 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
             myBlankHisto2.Draw()
           
             l1.Draw("same")
-            b10.Draw("same")
-            b20.Draw("same")
+            #b10.Draw("same")
+            #b20.Draw("same")
 
       # ------------------------------- overlay PYTHIA with final results -------------------------------
       if plot_pythia: 
         hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
+
+        if grooming_setting and maxbin:
+          hPythia = self.truncate_hist(hPythia, maxbin+1,'final_pythia_trunc')
+        else:
+          hPythia = self.truncate_hist(hPythia, maxbin, 'final_pythia_trunc')
 
         plot_errors = False
         if plot_errors:
@@ -642,6 +665,12 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       # ------------------------------- overlay HERWIG with final results -------------------------------
       if self.plot_herwig:
         hHerwig, fraction_tagged_herwig = self.herwig_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
+   
+        if grooming_setting and maxbin:
+          hHerwig = self.truncate_hist(hHerwig, maxbin+1, 'final_herwig_trunc')
+        else:
+          hHerwig = self.truncate_hist(hHerwig, maxbin, 'final_herwig_trunc')
+
         hHerwig.SetLineColor(color)
         hHerwig.SetLineColorAlpha(color, 0.5)
         hHerwig.SetLineWidth(4)
@@ -747,21 +776,21 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.5,0.5, text)
 
-    x = 0.25
-    y = 0.22
+    x = 0.23
+    y = 0.23
     
     text_latex.SetTextSize(0.05)
     text = 'pp #sqrt{#it{s}} = 5.02 TeV'
     text_latex.DrawLatex(x, y-0.00, text)
 
-    text = 'Charged jets   anti-#it{k}_{T}'
-    text_latex.DrawLatex(x, y-0.06, text)
+    text = 'Charged-particle jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-0.18, text)
     
     text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR)
-    text_latex.DrawLatex(x, y-0.12, text)
+    text_latex.DrawLatex(x, y-0.06, text)
     
     text = str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}'
-    text_latex.DrawLatex(x, y-0.18, text)
+    text_latex.DrawLatex(x, y-0.12, text)
     
     myLegend.Draw()
     
@@ -828,6 +857,92 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         max = h.GetMaximum()
         
     return max
+
+  #################################################################################################
+  # Plot various slices of the response matrix (from the THn)
+  #################################################################################################
+  def plot_RM_slices( self , jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth , maxbin ):
+
+    self.utils.set_plotting_options()
+    ROOT.gROOT.ForceStyle()
+
+    # (pt-det, pt-true, obs-det, obs-true)
+    output_dir = getattr(self, 'output_dir_main')
+    file = os.path.join(output_dir, 'response.root')
+    f = ROOT.TFile(file, 'READ')
+
+    thn_name = 'hResponse_JetPt_{}_R{}_{}_rebinned'.format(self.observable, jetR, obs_label)
+    thn = f.Get(thn_name)
+    thn.GetAxis(1).SetRangeUser(min_pt_truth, max_pt_truth)
+
+    h2 = thn.Projection(3,2)
+    h2.SetName('hPythia_proj_obs_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
+    h2.SetDirectory(0) 
+
+    # -------------------------
+    h2 = self.utils.normalize_response_matrix(h2)
+    # Set z-maximum in Soft Drop case, since otherwise the untagged bin will dominate the scale
+    if grooming_setting and 'sd' in grooming_setting:
+      h2.SetMaximum(0.3)
+    # -------------------------
+
+    c = ROOT.TCanvas("c","c: hist",1800,1400)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.17)
+    ROOT.gPad.SetBottomMargin(0.13)
+    ROOT.gPad.SetRightMargin(0.17)
+    ROOT.gPad.SetTopMargin(0.26)
+    c.SetLogz()
+
+    h2.GetYaxis().SetTitle('#it{#DeltaR}_{axis}^{truth}')
+    h2.GetYaxis().SetTitleOffset(1.7)
+    h2.GetYaxis().SetNdivisions(107)
+    h2.GetYaxis().SetTitleSize(0.05)
+    h2.GetYaxis().SetLabelSize(0.05)
+
+    h2.GetXaxis().SetTitle('#it{#DeltaR}_{axis}^{det}')
+    h2.GetXaxis().SetNdivisions(107)
+    h2.GetXaxis().SetTitleSize(0.05)
+    h2.GetXaxis().SetLabelSize(0.05)
+
+    h2.GetZaxis().SetTitle('Probability density')
+    h2.GetZaxis().SetTitleOffset(1.4)
+
+    if maxbin: 
+      h2.GetXaxis().SetRange(1,maxbin)
+      h2.GetYaxis().SetRange(1,maxbin)
+
+    h2.Draw('colz')
+
+    # -------------------------
+    subobs_label = self.utils.formatted_subobs_label(self.observable)
+    text = '' 
+ 
+    if obs_label == 'Standard_WTA':
+      text += 'Standard - WTA'
+    elif 'Standard_SD' in obs_label:
+      text += 'Standard - '
+    elif 'WTA_SD' in obs_label:
+      text += 'WTA - ' 
+
+    if grooming_setting:
+      text += self.utils.formatted_grooming_label(grooming_setting, verbose=True).replace("Soft Drop","SD")
+    # -------------------------
+
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text_latex.SetTextSize(0.05)
+    text_latex.DrawLatex(0.06,0.95,'ALICE {}'.format(self.figure_approval_status))
+    text_latex.DrawLatex(0.06,0.89,'PYTHIA8 Monash2013')
+    text_latex.DrawLatex(0.06,0.83,'pp #sqrt{#it{s}} = 5.02 TeV')
+    text_latex.DrawLatex(0.06,0.77,text)
+    text_latex.DrawLatex(0.45,0.95,'Charged-particle jets   anti-#it{k}_{T}')
+    text_latex.DrawLatex(0.45,0.89,str(min_pt_truth) + ' < #it{p}_{T, ch jet} < ' + str(max_pt_truth) + ' GeV/#it{c}')
+    text_latex.DrawLatex(0.45,0.82,'#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {}'.format(0.9-jetR))
+
+    filename = os.path.join(output_dir, 'RM/RM_'+obs_label+'_{}_{}.pdf'.format(min_pt_truth,max_pt_truth))
+    c.SaveAs(filename)
+    c.Close()
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
