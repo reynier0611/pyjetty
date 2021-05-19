@@ -57,6 +57,19 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     else:
       self.plot_herwig = False
 
+    # Parameters for SCET comparison
+    self.do_theory_comp = False
+    if 'do_theory_comp' in config:
+      self.do_theory_comp = config['do_theory_comp']
+
+      if 'th_subconfigs' in config:
+        self.th_subconfigs = config['th_subconfigs']
+      else:
+        self.th_subconfigs = self.obs_subconfig_list
+
+      self.theory_dir = config['theory_dir']
+      self.response_labels = config['response_labels']
+ 
   #---------------------------------------------------------------
   # This function is called once for each subconfiguration
   #---------------------------------------------------------------
@@ -211,8 +224,18 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       maxbin = None
       maxbin = self.obs_max_bins(obs_label)[bin]
 
+      # Plot each result independently with the pythia prediction
       self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=True)
-     
+    
+      # --------------------------------------------------------------
+      # Plot each result independently with the scet folded prediction 
+      if self.do_theory_comp:
+        for itm in self.th_subconfigs:
+         if obs_setting == self.obs_config_dict[itm]['axis']: 
+           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=True)
+           continue
+      # --------------------------------------------------------------
+
       self.plot_RM_slices( jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth , maxbin )
  
       # Fill tagging fraction
@@ -230,7 +253,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       fFinalResults.Close()
       
   #----------------------------------------------------------------------
-  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False):
+  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=False):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -280,8 +303,9 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
+    # ------------------------------------------------------------------------------------------------
+    # Overlay Pythia with the data
     if plot_pythia:
-    
       hPythia, fraction_tagged_pythia = self.pythia_prediction(jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth)
       if hPythia:
         hPythia.SetFillStyle(0)
@@ -294,6 +318,27 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       else:
         print('No PYTHIA prediction for {} {}'.format(self.observable, obs_label))
         plot_pythia = False
+    # ------------------------------------------------------------------------------------------------
+    # Overlay the (already processed) SCET calculations
+    g_scet_c = []
+    g_scet_min = []
+    g_scet_max = []
+
+    clr_arr = [62,2,8,92]
+
+    if plot_scet:
+      for g, gen in enumerate(self.response_labels):
+        g_c, g_min, g_max = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, g)
+
+        g_c.SetLineColor(clr_arr[g])
+        g_c.SetFillColorAlpha(clr_arr[g],0.2)
+        g_c.Draw('sameLE3')
+
+        g_scet_c.append(g_c)
+        g_scet_min.append(g_min)
+        g_scet_max.append(g_max)
+
+    # ------------------------------------------------------------------------------------------------
     
     h_sys.DrawCopy('E2 same')
     h.DrawCopy('PE X0 same')
@@ -360,8 +405,29 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     fFinalResults = ROOT.TFile(final_result_root_filename, 'UPDATE')
     h.Write()
     h_sys.Write()
-    hPythia.Write()
+    if plot_pythia:
+      hPythia.Write()
     fFinalResults.Close()
+
+  #----------------------------------------------------------------------
+  def scet_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, idx):
+    scet_file = 'folded_scet_calculations.root'
+    scetFilename = os.path.join(self.theory_dir, scet_file)
+
+    F_scet = ROOT.TFile(scetFilename)
+
+    label = '_folded_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label += obs_label
+    if grooming_setting:
+      print('IMPLEMENT THIS')
+      exit()
+    label += '_%i_pT_%i_%i_Scaled' % ( idx , (int)(min_pt_truth) , (int)(max_pt_truth) )
+
+    g_scet_c = F_scet.Get('g'+label)
+    g_scet_min = F_scet.Get('g_min'+label)
+    g_scet_max = F_scet.Get('g_max'+label)
+
+    return g_scet_c, g_scet_min, g_scet_max
 
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth):
