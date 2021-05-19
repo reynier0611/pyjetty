@@ -56,7 +56,15 @@ class TheoryFolding():
       self.jetR_list = config['jetR']
       self.observable = config['analysis_observable']
       self.obs_config_dict = config[self.observable]
-      self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
+
+      # If the user specifies certain subconfigurations to fold via the th_subconfigs parameter,
+      # only fold those. Otherwise, assume we want to ufold all subconfigs in the config file
+      if 'th_subconfigs' in config:
+        self.obs_subconfig_list = config['th_subconfigs']
+      else:
+        self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
+      print(self.obs_subconfig_list)
+
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
       self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
       self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i]) for i in range(len(self.obs_subconfig_list))]
