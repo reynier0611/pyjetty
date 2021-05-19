@@ -63,7 +63,6 @@ class TheoryFolding():
         self.obs_subconfig_list = config['th_subconfigs']
       else:
         self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
-      print(self.obs_subconfig_list)
 
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
       self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
@@ -81,7 +80,10 @@ class TheoryFolding():
       self.theory_dir = config['theory_dir']
 
       # binning
-      self.theory_obs_bins = config['theory_obs_bins'] # Binning desired for observable
+      self.theory_obs_bins = None
+      if 'theory_obs_bins' in config:
+        self.theory_obs_bins = config['theory_obs_bins'] # Binning desired for observable
+
       self.theory_pt_bins  = config['theory_pt_bins' ] # pT binning of theory calculations
       self.final_pt_bins   = config['final_pt_bins'  ] # pT binning wanted for the final curves
 
@@ -109,11 +111,11 @@ class TheoryFolding():
       print('Loading pT scale factors...')
       self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
       # ------------
-      print('Loading theory curves...')
-      self.load_theory_curves()
-      # ------------
       print('Loading response matrix for folding theory predictions...')
       self.load_theory_response()
+      # ------------
+      print('Loading theory curves...')
+      self.load_theory_curves()
       # ------------
       print("Folding theory histograms...")
       self.fold_theory()
@@ -205,6 +207,13 @@ class TheoryFolding():
           ['p_{T}^{initial}', 'p_{T}^{final}', 'obs^{initial}', 'obs^{final}']
           e.g. ['p_{T}^{det}', 'p_{T}^{truth}', 'obs^{det}', 'obs_{truth}']
           '''
+
+          # If no binning was specified by the user, take the RM binning
+          if self.theory_obs_bins == None:
+            self.theory_obs_bins = self.return_histo_binning_1D( thn.Projection(3) )
+            print('WARNING: No observable binning was specified, so will take whichever binning the RM comes with.')
+            print('         To change this, please, add a parameter theory_obs_bins to the config file')
+
           det_pt_bin_array = array('d', self.theory_pt_bins)
           tru_pt_bin_array = det_pt_bin_array
           det_obs_bin_array = array('d', self.theory_obs_bins)
@@ -233,6 +242,18 @@ class TheoryFolding():
           # Save the response matrix to the root file, in case we want to check something later
           self.outfile.cd()
           roounfold_thn.Write()
+
+  #----------------------------------------------------------------------
+  # Extract binning from a 1D histogram
+  #----------------------------------------------------------------------
+  def return_histo_binning_1D(self,h1):
+    nBins = h1.GetNbinsX()
+    binning = []
+    for b in range(0,nBins):
+      binning.append(h1.GetBinLowEdge(b+1))
+      if b == nBins-1:
+        binning.append(h1.GetBinLowEdge(b+1)+h1.GetBinWidth(b+1))
+    return array('d',binning)
 
   #----------------------------------------------------------------------
   # Fold theoretical predictions
