@@ -117,19 +117,8 @@ class pythia_parton_hadron(process_base.ProcessBase):
         pythia_MPI = pyconf.create_and_init_pythia_from_args(args, mycfg)
         self.calculate_events(pythia_MPI, MPIon=True)
         print()
-
-        # -------------------------------
-        # PYTHIA instance with no UE (i.e. MPI & ISR off)
-        setattr(args, "py_noue", True)
-        pythia_noUE = pyconf.create_and_init_pythia_from_args(args, mycfg)
-        self.calculate_events(pythia_noUE, MPIon=False, ISRon=False)
-        print()
-
-        # -------------------------------
-        for jetR in self.jetR_list:
-            getattr(self, "tw_R%s" % str(jetR).replace('.', '')).fill_tree()
  
-        self.scale_print_final_info(pythia, pythia_MPI, pythia_noUE)
+        self.scale_print_final_info(pythia, pythia_MPI)
 
         outf.Write()
         outf.Close()
@@ -201,11 +190,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
               setattr(self, name, h)
               getattr(self, hist_list_name).append(h)
 
-              name = 'hResponse_JetPt_R%s' % R_label
-              h = ROOT.TH2F(name, name+';#it{p}_{T}^{parton jet} [GeV/#it{c}];#it{p}_{T}^{ch jet} [GeV/#it{c}]', 200, 0, 200, 200, 0, 200)
-              setattr(self, name, h)
-              getattr(self, hist_list_name).append(h)
-
             # ----------------------------------------------------------------
             # Loop over subobservable
             for i, axes in enumerate(self.obs_settings[self.observable]):
@@ -221,9 +205,9 @@ class pythia_parton_hadron(process_base.ProcessBase):
               obs_label = self.observable
               if self.observable == 'jet_axis':
                 obs_label = '#DeltaR'
-                max_obs = jetR / 2. # in the case of jet-axis differences the distribution is observed to die off around jetR / 2 (except for Standard - SD)
+                max_obs = jetR 
                 if 'Standard_SD' in axes:
-                  max_obs = jetR / 10. # in the Standard - SD the distribution is observed to die off around jetR / 10
+                  max_obs = jetR / 2.
 
               # ----- charged hadron-level histograms --------------------------
               if self.level in [None, 'ch']:
@@ -238,111 +222,28 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 setattr(self, name, h)
                 getattr(self, hist_list_name_MPIon).append(h)
 
-                # histograms for MPI off, ISR off
-                name = common_name_1 + 'JetPt_ch_noUE' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}', 195, 5, 200,160, 0, max_obs)
-                setattr(self, name, h)
-
-                # histograms to check features of jets that go into the peak at zero in the Standard - SD distributions
-                if 'Standard_SD' in axes:
-                  name = common_name_1 + 'Nconstit_under_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];N_{constit}^{ch jet}', 195, 5, 200,20,1,20)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'JetEta_under_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#eta^{ch jet}', 195, 5, 200,100,-1+jetR,1-jetR)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'FirstSplit_z_under_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#frac{min(p^{ch jet}_{T,1},p^{ch jet}_{T,2})}{(p^{ch jet}_{T,1} + p^{ch jet}_{T,2})}', 195, 5, 200,100,0,0.5)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'FirstSplit_z_ovr_deltaR_beta_under_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#frac{min(p^{ch jet}_{T,1},p^{ch jet}_{T,2})}{(p^{ch jet}_{T,1} + p^{ch jet}_{T,2})}(#frac{R}{#DeltaR})^{#beta}', 195, 5, 200,100,0,0.5)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'Nconstit_off_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];N_{constit}^{ch jet}', 195, 5, 200,20,1,20)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'JetEta_off_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#eta^{ch jet}', 195, 5, 200,100,-1+jetR,1-jetR)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'FirstSplit_z_off_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#frac{min(p^{ch jet}_{T,1},p^{ch jet}_{T,2})}{(p^{ch jet}_{T,1} + p^{ch jet}_{T,2})}', 195, 5, 200,100,0,0.5)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-                  name = common_name_1 + 'FirstSplit_z_ovr_deltaR_beta_off_peak_JetPt_ch_MPIon' + common_name_2
-                  h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];#frac{min(p^{ch jet}_{T,1},p^{ch jet}_{T,2})}{(p^{ch jet}_{T,1} + p^{ch jet}_{T,2})}(#frac{R}{#DeltaR})^{#beta}', 195, 5, 200,100,0,0.5)
-                  setattr(self, name, h)
-                  getattr(self, hist_list_name_MPIon).append(h)
-
-              # ----- full hadron-level histograms -----------------------------
-              if self.level in [None, 'h']:
-                name = common_name_1 + 'JetPt_h' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, h} [GeV/#it{c}];'+obs_label+'^{h}', 195, 5, 200,160, 0, max_obs)
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
-
-              # ----- parton-level histograms ----------------------------------
-              if self.level in [None, 'p']:
-                name = common_name_1 + 'JetPt_p' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton} [GeV/#it{c}];'+obs_label+'^{p}', 195, 5, 200,160, 0, max_obs)
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
-
               # ----------------------------------------------------------------
               if self.level == None:
-                name = 'hResponse_' + self.observable + common_name_2
-                h = ROOT.TH2F(name, name+';'+obs_label+'^{parton};'+obs_label+'^{ch}', 100, 0, max_obs, 100, 0, max_obs)
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
-
-                name = common_name_1 + 'Residual_JetPt' + common_name_2 
-                h = ROOT.TH2F(name, name+';p_{T}^{jet, parton} [GeV/#it{c}];#frac{'+obs_label+'^{jet, parton}-'+obs_label+'^{ch jet}}{'+obs_label+'^{jet, parton}}', 300, 0, 300, 200, -3., 3.)
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
-
-                name = common_name_1 + 'Diff_JetPt' + common_name_2
-                h = ROOT.TH2F(name, name+';#it{p}_{T}^{jet, ch} [GeV/#it{c}];'+obs_label+'^{jet, parton} - '+obs_label+'^{jet, ch}', 300, 0, 300, 200, -2., 2.)
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
-
                 # Create THn of response
                 dim = 4
                 title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}',obs_label+'^{ch}', obs_label+'^{parton}']
-                nbins = [14, 14, 100, 101]
+                nbins = [28, 28, 80, 80]
                 min_li = [ 10.,  10., 0.     , 0.     ]
                 max_li = [150., 150., max_obs, max_obs]
                 if grooming_setting:
                   min_li[2] = -max_obs/10.
                   min_li[3] = -max_obs/10.
 
-                name = 'hResponse_JetPt_' + self.observable + '_ch' + common_name_2
                 nbins = (nbins)
                 xmin = (min_li)
                 xmax = (max_li)
                 nbins_array = array.array('i', nbins)
                 xmin_array = array.array('d', xmin)
                 xmax_array = array.array('d', xmax)
-                h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
-                for i in range(0, dim):
-                    h.GetAxis(i).SetTitle(title[i])
-                h.Sumw2()
-                setattr(self, name, h)
-                getattr(self, hist_list_name).append(h)
 
-                # Another set of THn for full hadron folding
-                title = ['p_{T}^{h jet}', 'p_{T}^{parton jet}',obs_label+'^{h}', obs_label+'^{parton}']
-                name = 'hResponse_JetPt_' + self.observable + '_h' + common_name_2
+                # THn for full to charged hadron-level folding
+                title = ['p_{T}^{ch jet}', 'p_{T}^{h jet}',obs_label+'^{ch}', obs_label+'^{h}']
+                name = 'hResponse_JetPt_' + self.observable + '_h2ch' + common_name_2
                 h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                 for i in range(0, dim):
                     h.GetAxis(i).SetTitle(title[i])
@@ -356,14 +257,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
     def init_jet_tools(self):
         
         for jetR in self.jetR_list:
-            jetR_str = str(jetR).replace('.', '')
-            
-            # Initialize tree writer
-            name = 'particle_unscaled_R%s' % jetR_str
-            t = ROOT.TTree(name, name)
-            setattr(self, "t_R%s" % jetR_str, t)
-            tw = RTreeWriter(tree=t)
-            setattr(self, "tw_R%s" % jetR_str, tw)
+            jetR_str = str(jetR).replace('.', '')      
             
             # set up our jet definition and a jet selector
             jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
@@ -393,17 +287,19 @@ class pythia_parton_hadron(process_base.ProcessBase):
         
         iev = 0  # Event loop count
 
-        if MPIon and ISRon:
+        if MPIon and ISRon:                    # MPI = on and ISR = on
             hNevents = self.hNeventsMPI
-        elif ISRon:
+        elif ISRon:                            # MPI = on and ISR = off
             hNevents = self.hNevents
-        else:
+        else:                                  # MPI = off and ISR = off
             hNevents = self.hNeventsNoUE
 
+        # Loop over all events requested
         while hNevents.GetBinContent(1) < self.nev:
             if not pythia.next():
                 continue
 
+            # parton level
             parts_pythia_p = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
             
             hstatus = pythia.forceHadronLevel()
@@ -411,8 +307,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 #pwarning('forceHadronLevel false event', iev)
                 continue
              
+            # full-hadron level
             parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
 
+            # charged-hadron level
             parts_pythia_hch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
 
             # Some "accepted" events don't survive hadronization step -- keep track here
@@ -430,8 +328,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
             jetR_str = str(jetR).replace('.', '')
             jet_selector = getattr(self, "jet_selector_R%s" % jetR_str)
             jet_def = getattr(self, "jet_def_R%s" % jetR_str)
-            t = getattr(self, "t_R%s" % jetR_str)
-            tw = getattr(self, "tw_R%s" % jetR_str)
             count1 = getattr(self, "count1_R%s" % jetR_str)
             count2 = getattr(self, "count2_R%s" % jetR_str)
  
@@ -444,20 +340,10 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 for jet in jets_ch:
                     self.fill_MPI_histograms(jetR, jet)
                 continue
-            elif not MPIon and not ISRon:
-                for jet in jets_ch:
-                    self.fill_noUE_histograms(jetR, jet)
-                continue
-
-            if self.level:  # Only save info at one level w/o matching
-                jets = locals()["jets_%s" % self.level]
-                for jet in jets:
-                    self.fill_unmatched_jet_tree(tw, jetR, iev, jet)
-                continue
 
             for i,jchh in enumerate(jets_ch):
 
-                # match hadron (full) jet
+                # match hadron jets and charged jets
                 drhh_list = []
                 for j, jh in enumerate(jets_h):
                     drhh = jchh.delta_R(jh)
@@ -480,7 +366,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
                     else:
                         k, jp = dr_list[0]
                         
-                        self.fill_matched_jet_tree(tw, jetR, iev, jp, jh, jchh)
                         self.fill_jet_histograms(jetR, jp, jh, jchh)
                         
             setattr(self, "count1_R%s" % jetR_str, count1)
@@ -515,84 +400,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
       return deltaR
 
     #---------------------------------------------------------------
-    # Get z of first splitting
-    #---------------------------------------------------------------
-    def z_first_split(self, jetR, jet):
-      gs = {'sd': [0.,9e16]} # Use a grooming setting that will return the jet ungroomed
-      gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
-      jet_sd_lund = self.utils.groom(gshop, gs, jetR)
-      min_pT_pT1_p_pT2 = jet_sd_lund.z() 
-      # can also get it the following way: 
-      # min_pT_pT1_p_pT2 = min(jet_sd_lund.harder().pt(),jet_sd_lund.softer().pt())/(jet_sd_lund.harder().pt()+jet_sd_lund.softer().pt()))
-      return min_pT_pT1_p_pT2
-
-    #---------------------------------------------------------------
-    # Get DeltaR of first splitting
-    #---------------------------------------------------------------
-    def DeltaR_first_split(self, jetR, jet):
-      gs = {'sd': [0.,9e16]} # Use a grooming setting that will return the jet ungroomed
-      gshop = fjcontrib.GroomerShop(jet, jetR, self.reclustering_algorithm)
-      jet_sd_lund = self.utils.groom(gshop, gs, jetR)
-      deltaR = jet_sd_lund.Delta()/jetR
-
-      return deltaR
-
-    #---------------------------------------------------------------
-    # Fill jet tree with (unscaled/raw) matched parton/hadron tracks
-    #---------------------------------------------------------------
-    def fill_matched_jet_tree(self, tw, jetR, iev, jp, jh, jchh):
-
-        tw.fill_branch('iev', iev)
-        tw.fill_branch('ch', jchh)
-        tw.fill_branch('h', jh)
-        tw.fill_branch('p', jp)
-
-        if(self.observable=='jet_axis'):
-          for i, axes in enumerate(self.obs_settings[self.observable]):
-            grooming_setting = self.obs_grooming_settings[self.observable][i]
-            
-            deltaR_ch = self.angle_between_jet_axes(jetR, jchh, axes, grooming_setting)
-            deltaR_h  = self.angle_between_jet_axes(jetR, jh  , axes, grooming_setting)
-            deltaR_p  = self.angle_between_jet_axes(jetR, jp  , axes, grooming_setting)
-
-            common_name = 'R' + str(jetR).replace('.','') +'_' + axes
-            grooming_label = ''
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-              common_name += '_' + grooming_label
-
-            name = 'DeltaR_ch_' + common_name
-            tw.fill_branch(name,deltaR_ch)
-
-            name = 'DeltaR_h_' + common_name
-            tw.fill_branch(name,deltaR_h)
-
-            name = 'DeltaR_p_' + common_name
-            tw.fill_branch(name,deltaR_p)
-
-    #---------------------------------------------------------------
-    # Fill jet tree with (unscaled/raw) unmatched parton/hadron tracks
-    #---------------------------------------------------------------
-    def fill_unmatched_jet_tree(self, tw, jetR, iev, jet):
-
-        tw.fill_branch('iev', iev)
-        tw.fill_branch(self.level, jet)
-
-        if(self.observable=='jet_axis'):
-          for i, axes in enumerate(self.obs_settings[self.observable]):
-            grooming_setting = self.obs_grooming_settings[self.observable][i]
-            deltaR = self.angle_between_jet_axes(jetR, jet, axes, grooming_setting)
-
-            common_name = 'R' + str(jetR).replace('.','') +'_' + axes 
-            grooming_label = ''
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-              common_name += '_' + grooming_label   
-            
-            name = 'DeltaR_' + common_name
-            tw.fill_branch(name,deltaR)
-
-    #---------------------------------------------------------------
     # Fill jet histograms for MPI-on PYTHIA run-through
     #---------------------------------------------------------------
     def fill_MPI_histograms(self, jetR, jet):
@@ -620,64 +427,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
             h = getattr(self, name)
             h.Fill(jet.pt(),deltaR)
 
-            # Studying jets under the peak at 0 in the Standard - SD distributions
-            if 'Standard_SD' in axes:
-              if deltaR < 1e-9 and deltaR > -0.5:
-                name = common_name_1 + 'Nconstit_under_peak_JetPt_ch_MPIon' + common_name_2 
-                h = getattr(self, name)
-                h.Fill(jet.pt(),len(jet.constituents()))
-
-                name = common_name_1 + 'JetEta_under_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),jet.eta())
-
-                name = common_name_1 + 'FirstSplit_z_under_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),self.z_first_split(jetR, jet))
-
-                name = common_name_1 + 'FirstSplit_z_ovr_deltaR_beta_under_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),self.z_first_split(jetR, jet)/(self.DeltaR_first_split(jetR, jet))**(grooming_setting['sd'][1]))
-
-              elif deltaR>0:
-                name = common_name_1 + 'Nconstit_off_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),len(jet.constituents()))
-
-                name = common_name_1 + 'JetEta_off_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),jet.eta())
-
-                name = common_name_1 + 'FirstSplit_z_off_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),self.z_first_split(jetR, jet))
-
-                name = common_name_1 + 'FirstSplit_z_ovr_deltaR_beta_off_peak_JetPt_ch_MPIon' + common_name_2
-                h = getattr(self, name)
-                h.Fill(jet.pt(),self.z_first_split(jetR, jet)/(self.DeltaR_first_split(jetR, jet))**(grooming_setting['sd'][1]))
-
-    #---------------------------------------------------------------
-    # Fill jet histograms for MPI-off ISR-off PYTHIA run-through
-    #---------------------------------------------------------------
-    def fill_noUE_histograms(self, jetR, jet):
-
-        if(self.observable=='jet_axis'):
-          for i, axes in enumerate(self.obs_settings[self.observable]):
-            grooming_setting = self.obs_grooming_settings[self.observable][i]
-            deltaR = self.angle_between_jet_axes(jetR, jet, axes, grooming_setting)
-
-            common_name_1 = 'h_' + self.observable + '_'
-            common_name_2 = '_R' + str(jetR).replace('.','') +'_' + axes + '_Scaled'
-
-            grooming_label = ''
-            if grooming_setting:
-              grooming_label = self.utils.grooming_label(grooming_setting)
-              common_name_2 += '_' + grooming_label
-            name = common_name_1 + 'JetPt_ch_noUE' + common_name_2
-
-            h = getattr(self, name)
-            h.Fill(jet.pt(),deltaR)
-
     #---------------------------------------------------------------
     # Fill jet histograms
     #---------------------------------------------------------------
@@ -699,7 +448,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
         if self.level == None:
             if jp.pt():  # prevent divide by 0
                 getattr(self, 'hJetPtRes_R%s' % R_label).Fill(jp.pt(), (jp.pt() - jch.pt()) / jp.pt())
-            getattr(self, 'hResponse_JetPt_R%s' % R_label).Fill(jp.pt(), jch.pt())
 
         # Fill observable histograms and response matrices
         self.fill_RMs(jetR, jp, jh, jch) 
@@ -715,7 +463,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             deltaR_ch = self.angle_between_jet_axes(jetR, jch, axes, grooming_setting)
             deltaR_h  = self.angle_between_jet_axes(jetR, jh , axes, grooming_setting)
-            deltaR_p  = self.angle_between_jet_axes(jetR, jp , axes, grooming_setting) 
+            #deltaR_p  = self.angle_between_jet_axes(jetR, jp , axes, grooming_setting) 
             
             common_name_1 = 'h_' + self.observable + '_'
             common_name_2 = '_R' + str(jetR).replace('.','') +'_' + axes + '_Scaled' 
@@ -726,39 +474,18 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
             if self.level in [None, 'ch']:
               getattr(self, common_name_1 + 'JetPt_ch' + common_name_2 ).Fill(jch.pt(), deltaR_ch )
-          
-            if self.level in [None, 'h']:
-              getattr(self, common_name_1 + 'JetPt_h' + common_name_2 ).Fill(jh.pt(), deltaR_h )
-
-            if self.level in [None, 'p']:
-              getattr(self, common_name_1 + 'JetPt_p' + common_name_2 ).Fill(jp.pt(), deltaR_p )
 
             if self.level == None:
-              name = 'hResponse_' + self.observable + common_name_2
-              getattr(self, name ).Fill( deltaR_p , deltaR_ch )
-
-              # Residual plots (with and without divisor in y-axis)
-              name = common_name_1 + 'Diff_JetPt' + common_name_2
-              getattr(self, name ).Fill(jch.pt(), deltaR_p - deltaR_ch)
-              if deltaR_p:  # prevent divide by 0
-                name = common_name_1 + 'Residual_JetPt' + common_name_2
-                getattr(self, name ).Fill(jp.pt(), (deltaR_p - deltaR_ch) / deltaR_p)
-
-              # 4D response matrices for "forward folding" to ch level
-              x = ([jch.pt(), jp.pt(), deltaR_ch , deltaR_p])
+              # 4D response matrices for "forward folding" from full to charged hadron-level
+              x = ([jch.pt(), jh.pt(), deltaR_ch, deltaR_h])
               x_array = array.array('d', x)
-              name = 'hResponse_JetPt_' + self.observable + '_ch' + common_name_2
-              getattr(self, name ).Fill(x_array)
-
-              x = ([jh.pt(), jp.pt(), deltaR_h, deltaR_p])
-              x_array = array.array('d', x)
-              name = 'hResponse_JetPt_' + self.observable + '_h' + common_name_2
+              name = 'hResponse_JetPt_' + self.observable + '_h2ch' + common_name_2
               getattr(self, name ).Fill(x_array)
            
     #---------------------------------------------------------------
     # Initiate scaling of all histograms and print final simulation info
     #---------------------------------------------------------------
-    def scale_print_final_info(self, pythia, pythia_MPI, pythia_noUE):
+    def scale_print_final_info(self, pythia, pythia_MPI):
 
         # Scale all jet histograms by the appropriate factor from generated cross section
         # and the number of accepted events
@@ -767,9 +494,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
             print("Weight MPIoff tree by (cross section)/(N events) =", scale_f)
             MPI_scale_f = pythia_MPI.info.sigmaGen() / self.hNeventsMPI.GetBinContent(1)
             print("Weight MPIon tree by (cross section)/(N events) =", MPI_scale_f)
-            noUE_scale_f = pythia_noUE.info.sigmaGen() / self.hNeventsNoUE.GetBinContent(1)
-            print("Weight noUE tree by (cross section)/(N events) =", noUE_scale_f)
-            self.scale_jet_histograms(scale_f, MPI_scale_f, noUE_scale_f)
+            self.scale_jet_histograms(scale_f, MPI_scale_f)
         print()
 
         print("N total final MPI-off events:", int(self.hNevents.GetBinContent(1)), "with",
@@ -790,7 +515,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Scale all jet histograms by sigma/N
     #---------------------------------------------------------------
-    def scale_jet_histograms(self, scale_f, MPI_scale_f, noUE_scale_f):
+    def scale_jet_histograms(self, scale_f, MPI_scale_f):
 
         for jetR in self.jetR_list:
             # scale histograms with MPIoff and ISRon
@@ -802,21 +527,6 @@ class pythia_parton_hadron(process_base.ProcessBase):
             hist_list_name_MPIon = "hist_list_MPIon_R%s" % str(jetR).replace('.', '')
             for h in getattr(self, hist_list_name_MPIon):
                 h.Scale(MPI_scale_f)
-           
-            for i, axes in enumerate(self.obs_settings[self.observable]):
-              common_name_1 = 'h_' + self.observable + '_'
-              common_name_2 = '_R' + str(jetR).replace('.','') +'_' + axes + '_Scaled'
-              grooming_setting = self.obs_grooming_settings[self.observable][i]
-              grooming_label = ''
-              if grooming_setting:
-                grooming_label = self.utils.grooming_label(grooming_setting)
-                common_name_2 += '_' + grooming_label
- 
-              #name = common_name_1 + 'JetPt_ch_MPIon' + common_name_2
-              #getattr(self, name ).Scale(MPI_scale_f)
-
-              name = common_name_1 + 'JetPt_ch_noUE' + common_name_2
-              getattr(self, name ).Scale(noUE_scale_f)
 
 ################################################################
 if __name__ == '__main__':

@@ -76,8 +76,8 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         # -----------------------------------------------------        
         # Create histograms where theory curves will be stored
-        th_hists_no_scaling = []
-        th_hists = []
+        th_hists_no_scaling = []          # Basically a copy of the theory calculations, but binned
+        th_hists = []                     # Histograms that will actually be used in the folding
         hist_names = []
 
         # Loop over all scale variations
@@ -86,9 +86,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           if grooming_setting:
             hist_name += '_'
             hist_name += self.utils.grooming_label(grooming_setting)
+
           hist_name_no_scaling = hist_name + '_no_scaling'
-          th_hist = ROOT.TH2D(hist_name,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
-          th_hist_no_scaling = ROOT.TH2D(hist_name_no_scaling,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+
+          th_hist                     = ROOT.TH2D(hist_name                    ,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins)
+          th_hist_no_scaling          = ROOT.TH2D(hist_name_no_scaling         ,';p_{T}^{jet};%s'%(self.observable), len(pt_bins)-1, pt_bins, len(obs_bins)-1, obs_bins) 
 
           th_hists.append(th_hist)
           hist_names.append(hist_name)
@@ -111,6 +113,8 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           th_file = 'R_%s_pT_%i-%i.dat' % ( (str)(jetR).replace('.','') , (int)(pt_min) , (int)(pt_max) )
           th_file = os.path.join(th_path,th_file)
 
+          # ------------------------------------------------------------------------------------------------------------
+          # Load data from theory file
           with open( th_file ) as f:
 
             lines = [line for line in f.read().split('\n') if line[0] != '#']
@@ -138,6 +142,56 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
                 th_hists[sv].SetBinContent(p+1,ob+1,y_val_bin_ctr[ob])
 
           f.close()
+
+        # ------------------------------------------------------------------------------------------------------------  
+        for n_pt in range(0,len(self.final_pt_bins)-1):
+           for sv in range(0,n_scale_variations):
+             projection_name = 'h1_original_%s_R%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+            
+             min_bin, max_bin = self.bin_position( self.theory_pt_bins , self.final_pt_bins[n_pt],self.final_pt_bins[n_pt+1] )
+             h1_original_hist = th_hists[sv].ProjectionY(projection_name,min_bin,max_bin)
+             h1_original_hist.SetTitle(projection_name)
+             h1_original_hist.SetDirectory(0)
+            
+             # Undo the bin width scaling and set correct normalization
+             norm_factor = h1_original_hist.Integral()
+             if norm_factor == 0: norm_factor = 1
+             h1_original_hist.Scale(1./norm_factor, "width")
+            
+             for b in range(0,h1_original_hist.GetNbinsX()):
+               h1_original_hist.SetBinError(b+1,0)
+            
+             self.outfile.cd()
+             h1_original_hist.Write()
+             setattr(self,projection_name,h1_original_hist)
+
+        # Do the loop backwards and find min and max histograms
+        for n_pt in range(0,len(self.final_pt_bins)-1):
+          histo_list = []
+          for sv in range(0,n_scale_variations):
+            projection_name = 'h1_original_%s_R%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+            histo_list.append(getattr(self,projection_name))
+          hist_min, hist_max = self.min_max( histo_list )
+
+          # Create a graph out of these histograms
+          name_central = 'h1_original_%s_R%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          h_central = getattr(self,name_central)
+          graph = self.histo_to_graph(h_central,hist_min,hist_max)
+          name_graph = 'g_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          graph.SetName(name_graph)
+
+          graph_min = ROOT.TGraph(hist_min)
+          graph_min.SetName('g_min_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+
+          graph_max = ROOT.TGraph(hist_max)
+          graph_max.SetName('g_max_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+
+          self.outfile.cd()
+          hist_min.Write()
+          hist_max.Write()
+          graph.Write()
+          graph_min.Write()
+          graph_max.Write()
 
         # -----------------------------------------------------
         # Setting the filled histograms as attributes

@@ -320,23 +320,26 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         plot_pythia = False
     # ------------------------------------------------------------------------------------------------
     # Overlay the (already processed) SCET calculations
-    g_scet_c = []
-    g_scet_min = []
-    g_scet_max = []
-
-    clr_arr = [62,2,8,92]
+    clr_arr = [62,8,92]
 
     if plot_scet:
+      g_scet_orig_c, g_scet_orig_min, g_scet_orig_max = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth)
+      
+      g_scet_orig_c.SetMarkerColor(2)
+      g_scet_orig_c.SetLineColor(2)
+      g_scet_orig_c.SetFillColorAlpha(2,0.2)
+      g_scet_orig_c.Draw('sameLE3')
+
+      # Folded theory curves
+      lg_scet_folded_c = []
       for g, gen in enumerate(self.response_labels):
-        g_c, g_min, g_max = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, g)
+        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, g)
 
-        g_c.SetLineColor(clr_arr[g])
-        g_c.SetFillColorAlpha(clr_arr[g],0.2)
-        g_c.Draw('sameLE3')
-
-        g_scet_c.append(g_c)
-        g_scet_min.append(g_min)
-        g_scet_max.append(g_max)
+        g_scet_folded_c.SetMarkerColor(clr_arr[g])
+        g_scet_folded_c.SetLineColor(clr_arr[g])
+        g_scet_folded_c.SetFillColorAlpha(clr_arr[g],0.2)
+        g_scet_folded_c.Draw('sameLE3')
+        lg_scet_folded_c.append(g_scet_folded_c)
 
     # ------------------------------------------------------------------------------------------------
     
@@ -380,13 +383,16 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
           text = ('#it{f}_{tagged}^{data} = %3.3f' % fraction_tagged) + (', #it{f}_{tagged}^{pythia} = %3.3f' % fraction_tagged_pythia)
           text_latex.DrawLatex(0.57, 0.52-delta, text)
 
-    #myLegend = ROOT.TLegend(0.25,0.7,0.45,0.85)
-    myLegend = ROOT.TLegend(0.25,0.60,0.45,0.9)
+    myLegend = ROOT.TLegend(0.22,0.60,0.40,0.9)
     self.utils.setup_legend(myLegend,0.035)
     myLegend.AddEntry(h, 'ALICE pp', 'pe')
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
+    if plot_scet:
+      myLegend.AddEntry(g_scet_orig_c,'SCET full-hadron')
+      for g, gen in enumerate(self.response_labels):
+        myLegend.AddEntry(lg_scet_folded_c[g],'SCET charged ('+gen+')')
     myLegend.Draw()
 
     name = 'hUnfolded_R{}_{}_{}-{}{}'.format(self.utils.remove_periods(jetR), obs_label, int(min_pt_truth), int(max_pt_truth), self.file_format)
@@ -410,7 +416,28 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     fFinalResults.Close()
 
   #----------------------------------------------------------------------
-  def scet_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, idx):
+  def scet_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth):
+   
+    scet_file = 'folded_scet_calculations.root'
+    scetFilename = os.path.join(self.theory_dir, scet_file)
+
+    F_scet = ROOT.TFile(scetFilename)
+
+    label = '_original_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label += obs_label
+    if grooming_setting:
+      print('IMPLEMENT THIS')
+      exit()
+    label += '_pT_%i_%i_Scaled' % ( (int)(min_pt_truth) , (int)(max_pt_truth) )
+
+    g_scet_c = F_scet.Get('g'+label)
+    g_scet_min = F_scet.Get('g_min'+label)
+    g_scet_max = F_scet.Get('g_max'+label)
+
+    return g_scet_c, g_scet_min, g_scet_max
+
+  #----------------------------------------------------------------------
+  def scet_folded_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, idx):
     scet_file = 'folded_scet_calculations.root'
     scetFilename = os.path.join(self.theory_dir, scet_file)
 
