@@ -39,7 +39,15 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
       # Loop through subconfigurations to fold (e.g. in the jet-axis analysis there Standard_WTA, Standard_SD_1, ...)
       for i in range(0,len(self.obs_subconfig_list)):
-        path_to_theory = os.path.join(self.theory_dir,self.obs_settings[i])
+        obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
+        grooming_setting = self.grooming_settings[i]  # grooming parameters
+        if grooming_setting and 'SD' in obs_setting:
+          label = obs_setting[:-4]
+          label += self.utils.grooming_label(grooming_setting)
+        else:
+          label = obs_setting 
+
+        path_to_theory = os.path.join(self.theory_dir,label)
 
         # Assume for a given subconfiguration all files have the same observable binning and only open the first file
         pt_min = self.theory_pt_bins[0]
@@ -61,15 +69,12 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
         # Up to this point we were gathering some information about the theory files:
         # (number of scale variations and observable granularity)
 
-        obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
-        grooming_setting = self.grooming_settings[i]  # grooming parameters
-
         pt_bins = array('d', self.theory_pt_bins)
         obs_points = array('d', th_obs )               # points provided in the theory calculation
         obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
 
-        if grooming_setting:
-          # Add bin for underflow value (tagging fraction)
+        # Add bin for underflow value (tagging fraction)
+        if grooming_setting and self.use_tagging_fraction:
           obs_bins = np.insert(obs_bins, 0, -0.001)
 
         obs_width = np.subtract(obs_bins[1:],obs_bins[:-1])
@@ -98,7 +103,8 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         # -----------------------------------------------------
         # opening theory file by file and fill histograms
-        th_path = os.path.join(self.theory_dir,obs_setting)
+        th_path = os.path.join(self.theory_dir,label)
+        print('reading from files in:',label)
 
         # loop over pT bins
         for p, pt in enumerate(pt_bins[:-1]):

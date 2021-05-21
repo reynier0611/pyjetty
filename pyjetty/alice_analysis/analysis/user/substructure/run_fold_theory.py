@@ -65,7 +65,8 @@ class TheoryFolding():
         self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
 
       self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
-      self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict)
+      #self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict) # This only works if all  
+      self.grooming_settings = [ self.get_grooming_setting(self.obs_config_dict[cf]) for cf in self.obs_subconfig_list]
       self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i]) for i in range(len(self.obs_subconfig_list))]
 
       # this corresponds to a label in the RM name which indicates whether we are going from parton to charged-hadron level, or
@@ -88,11 +89,16 @@ class TheoryFolding():
       self.final_pt_bins   = config['final_pt_bins'  ] # pT binning wanted for the final curves
 
       # response matrices for the folding, and labels describing them
+      self.theory_response_fname = config['response_files']
       self.theory_response_files = [ROOT.TFile(f, 'READ') for f in config['response_files']]
       self.theory_response_labels = config['response_labels']
 
       # scale factors needed to scale distributions
       self.theory_pt_scale_factors_filepath = os.path.join(self.theory_dir, config['pt_scale_factors_path'])
+
+      self.use_tagging_fraction = False
+      if 'use_tagging_fraction' in config:
+        self.use_tagging_fraction = config['use_tagging_fraction']
 
       self.output_dir = config['output_dir']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response') 
@@ -192,6 +198,9 @@ class TheoryFolding():
           # Load response matrix 
           name_RM = "hResponse_JetPt_" + self.observable + "_" + self.folding_type + "_" + label
           thn = response.Get(name_RM)
+          if thn == None:
+            print('Could not find RM:',name_RM,'in',self.theory_response_fname[ri])
+            exit()
           setattr(self, '%s_%i' % (name_RM, ri), thn)
 
           # Create Roounfold object
@@ -210,7 +219,8 @@ class TheoryFolding():
 
           # If no binning was specified by the user, take the RM binning
           if self.theory_obs_bins == None:
-            self.theory_obs_bins = self.return_histo_binning_1D( thn.Projection(3) )
+            binning = self.return_histo_binning_1D( thn.Projection(3) )
+            self.theory_obs_bins = [l for l in binning if l >= 0]
             print('WARNING: No observable binning was specified, so will take whichever binning the RM comes with.')
             print('         To change this, please, add a parameter theory_obs_bins to the config file')
 
@@ -612,6 +622,17 @@ class TheoryFolding():
       'This option has not been created yet. Bailing out!'
       exit()
     return label
+
+  #----------------------------------------------------------------------
+  # Return Grooming Parameters
+  #----------------------------------------------------------------------
+  def get_grooming_setting( self , subconf ):
+    if 'SoftDrop' in subconf:
+      zcut = subconf['SoftDrop']['zcut']
+      beta = subconf['SoftDrop']['beta']
+      return {'sd':[zcut,beta]}
+    else:
+      return None
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
