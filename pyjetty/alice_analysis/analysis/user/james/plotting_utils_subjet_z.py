@@ -38,7 +38,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     print(self)
 
   #---------------------------------------------------------------
-  def plot_subjet_matching(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold):
+  def plot_subjet_matching(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold, thermal=False):
 
     c = ROOT.TCanvas('c','c: hist',600,450)
     c.cd()
@@ -156,7 +156,10 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
       text_latex.DrawLatex(x, y+0.05, text)
       
       text_latex.SetTextSize(0.04)
-      text = 'PYTHIA8 Monash 2013 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      if thermal:
+        text = 'PYTHIA8 Monash 2013 embedded in thermal background'
+      else:
+        text = 'PYTHIA8 Monash 2013 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
       text_latex.DrawLatex(x, y, text)
         
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -181,7 +184,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
 
   #---------------------------------------------------------------
   def plot_subjet_money_plot(self, observable, jetR, R_max, prong_match_threshold, obs_setting,
-                             pt_bins_reported, output_dir, ytitle, option=''):
+                             pt_bins_reported, output_dir, ytitle, option='', thermal=False):
   
     name = 'h_{}_matched_pt_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_setting, R_max)
     h3D = self.fMC.Get(name)
@@ -196,11 +199,11 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
       h3D.GetXaxis().SetRangeUser(min_pt, max_pt)
   
       self.plot_obs_projection_subjet(observable, h3D, jetR, prong_match_threshold, obs_setting,
-                                      min_pt, max_pt, ytitle, output_dir)
+                                      min_pt, max_pt, ytitle, output_dir, thermal=thermal)
 
   #---------------------------------------------------------------
   def plot_obs_projection_subjet(self, observable, h3D, jetR, prong_match_threshold, obs_setting,
-                                 min_pt, max_pt, ytitle, output_dir):
+                                 min_pt, max_pt, ytitle, output_dir, thermal=False):
   
     # Reset projections for normalization
   
@@ -238,7 +241,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, self.xmin, self.xmax)
     myBlankHisto.SetNdivisions(505)
     #myBlankHisto.SetMinimum(0.01)
-    xtitle = h3D.GetXaxis().GetTitle()
+    xtitle = h3D.GetYaxis().GetTitle()
     myBlankHisto.GetXaxis().SetTitle(xtitle)
     myBlankHisto.GetXaxis().SetTitleSize(30)
     myBlankHisto.GetXaxis().SetTitleFont(43)
@@ -268,7 +271,7 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     self.setup_legend(leg_ratio, 0.1)
 
     myBlankHisto2 = myBlankHisto.Clone('myBlankHisto_C')
-    ytitle = 'Ratio'
+    ytitle = 'match / total'
     myBlankHisto2.SetYTitle(ytitle)
     myBlankHisto2.SetXTitle(xtitle)
     myBlankHisto2.GetXaxis().SetTitleSize(30)
@@ -338,7 +341,10 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     x = 0.23
     y = 0.9
     text_latex.SetTextSize(0.05)
-    text = 'PYTHIA8 embedded in thermal background'
+    if thermal:
+        text = 'PYTHIA8 embedded in thermal background'
+    else:
+        text = 'PYTHIA8 embedded in 0-10% Pb-Pb'
     text_latex.DrawLatex(x, y, text)
   
     text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
@@ -376,7 +382,321 @@ class PlottingUtils(plotting_utils_base.PlottingUtilsBase):
     line.SetLineStyle(2)
     line.Draw('same')
 
-    output_filename = os.path.join(output_dir, '{}/{}/money_plot_{}-{}.pdf'.format(jetR, obs_setting,
-                                          min_pt, max_pt))
+    output_filename = os.path.join(output_dir, f'money_plot_{min_pt}-{max_pt}_R{jetR}_r{obs_setting}.pdf')
     c.SaveAs(output_filename)
     c.Close()
+    
+  #---------------------------------------------------------------
+  def plot_prong_matching_delta(self, i_overlay, jetR, name_prefix, obs_subconfig_list, obs_settings, grooming_settings, overlay_list, prong_match_threshold, min_pt, max_pt, plot_deltaz=False, plot_matched=True):
+
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.2)
+    ROOT.gPad.SetBottomMargin(0.15)
+    c.GetPad(0).SetTicks(0,1)
+    
+    xmin = 0.
+    if plot_deltaz:
+      xmin = -jetR
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 20, xmin, jetR)
+    myBlankHisto.SetNdivisions(505)
+    myBlankHisto.GetXaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+    myBlankHisto.GetXaxis().SetTitleSize(0.05)
+    myBlankHisto.GetYaxis().SetTitleSize(0.05)
+    max = 0.01
+    myBlankHisto.SetMaximum(2*max)
+    myBlankHisto.SetMinimum(0.)
+    if plot_deltaz:
+        myBlankHisto.GetXaxis().SetTitle('#Delta#it{z}_{subjet}')
+        myBlankHisto.GetYaxis().SetTitle('#frac{d#it{N}}{d#Delta #it{z}_{subjet}}')
+    else:
+        xtitle = '#Delta#it{R}_{PYTHIA, PYTHIA#oplusPb#font[122]{-}Pb}^{leading subjet}'
+        myBlankHisto.GetXaxis().SetTitle(xtitle)
+        myBlankHisto.GetYaxis().SetTitle('#frac{{d#it{{N}}}}{{d{}}}'.format(xtitle))
+    myBlankHisto.Draw()
+    
+    leg = ROOT.TLegend(0.54,0.58,0.67,0.75)
+    self.setup_legend(leg,0.035)
+    
+    h_list = [] # Store hists in a list, sincge otherwise it seems I lose the marker information
+                # (removed from memory?)
+    
+    i_reset = 0
+    for i, subconfig_name in enumerate(obs_subconfig_list):
+    
+      if subconfig_name not in overlay_list:
+        continue
+
+      obs_setting = obs_settings[i]
+      grooming_setting = grooming_settings[i]
+      obs_label = self.obs_label(obs_setting, grooming_setting)
+      
+      if subconfig_name == overlay_list[0]:
+        marker = 20
+      elif subconfig_name == overlay_list[1]:
+        marker = 21
+      elif i > 1 and subconfig_name == overlay_list[2]:
+        marker = 33
+      else:
+        marker = 34
+      
+      name = '{}_{}{}{}'.format(name_prefix, obs_label, self.suffix, self.scaled_suffix)
+      hFraction_vs_pt = self.fMC.Get(name)
+
+      epsilon = 1e-5
+      min_bin = hFraction_vs_pt.GetYaxis().FindBin(0. + epsilon)
+      cut_bin = hFraction_vs_pt.GetYaxis().FindBin(prong_match_threshold + epsilon)
+      max_bin = hFraction_vs_pt.GetYaxis().FindBin(1. + epsilon)
+      min_frac_bin = cut_bin
+      max_frac_bin = max_bin
+
+      min_pt_bin = hFraction_vs_pt.GetXaxis().FindBin(min_pt + epsilon)
+      max_pt_bin = hFraction_vs_pt.GetXaxis().FindBin(max_pt + epsilon)
+
+      # Get projections of deltaR
+      hFraction_vs_pt.GetXaxis().SetRange(min_pt_bin, max_pt_bin)
+      if plot_matched:
+        hFraction_vs_pt.GetYaxis().SetRange(min_frac_bin, max_frac_bin)
+      else:
+        hFraction_vs_pt.GetYaxis().SetRange(min_bin, min_frac_bin)
+      hUnmatched_vs_pt = hFraction_vs_pt.Project3D('z')
+      hUnmatched_vs_pt.SetName('hUnmatched_vs_pt{}_{}_{}'.format(i, jetR, obs_label))
+      hUnmatched_vs_pt.SetLineColor(self.ColorArray[i_reset])
+      i_reset += 1
+      hUnmatched_vs_pt.SetLineWidth(4)
+      if self.thermal:
+        hUnmatched_vs_pt.SetLineColor(self.ColorArray[len(self.ColorArray)-i-2])
+      if max < hUnmatched_vs_pt.GetMaximum():
+        max = hUnmatched_vs_pt.GetMaximum()
+        if jetR == 0.2:
+          myBlankHisto.SetMaximum(2.4*max)
+        else:
+          myBlankHisto.SetMaximum(1.9*max)
+      hUnmatched_vs_pt.Draw('L hist same')
+      leg.AddEntry(hUnmatched_vs_pt, f'r = {obs_setting}', 'L')
+      h_list.append(hUnmatched_vs_pt)
+    
+    leg.Draw('same')
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+
+    if self.groomer_studies:
+      x = 0.23
+      y = 0.85
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 embedded in thermal background'
+      text_latex.DrawLatex(x, y, text)
+    else:
+      x = 0.23
+      y = 0.8
+      text_latex.SetTextSize(0.055)
+      text = self.figure_approval_status
+      text_latex.DrawLatex(x, y+0.05, text)
+      
+      text_latex.SetTextSize(0.04)
+      text = 'PYTHIA8 Monash 2013 embedded in 0#font[122]{-}10% Pb#font[122]{-}Pb'
+      text_latex.DrawLatex(x, y, text)
+        
+    text = '#sqrt{#it{s_{#it{NN}}}} = 5.02 TeV'
+    text_latex.DrawLatex(x, y-0.05, text)
+
+    text = 'Charged jets   anti-#it{k}_{T}'
+    text_latex.DrawLatex(x, y-0.1, text)
+    
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
+    text_latex.DrawLatex(x, y-0.15, text)
+    
+    text = str(int(min_pt)) + ' < #it{p}_{T, ch jet}^{pp-det} < ' + str(int(max_pt)) + ' GeV/#it{c}'
+    text_latex.DrawLatex(x, y-0.2, text)
+    
+    text_latex.SetTextSize(0.04)
+    text = 'PYTHIA leading subjet '
+    text_latex.DrawLatex(0.23, 0.5, text)
+    if plot_matched:
+        text = 'tagged in PYTHIA#oplusPb#font[122]{-}Pb'
+    else:
+        text = 'mis-tagged in PYTHIA#oplusPb#font[122]{-}Pb'
+    text_latex.DrawLatex(0.23, 0.46, text)
+    if plot_matched:
+        text = 'leading subjet'
+        text_latex.DrawLatex(0.23, 0.42, text)
+
+    if plot_matched:
+        label = 'matched'
+    else:
+        label = 'unmatched'
+
+    if plot_deltaz:
+        output_filename = os.path.join(self.output_dir, f'prong_matching_deltaZ/{self.remove_periods(name_prefix)}_{label}_{i_overlay}.pdf')
+    else:
+        output_filename = os.path.join(self.output_dir, f'prong_matching_deltaR/{self.remove_periods(name_prefix)}_{label}_{i_overlay}.pdf')
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_subjet_DeltaR(self, jetR, subjetR, jet_matching_distance):
+
+    if self.is_pp:
+      name = f'hDeltaR_ppdet_pptrue_subjet_z_R{jetR}_{subjetR}{self.scaled_suffix}'
+    else:
+      name = f'hDeltaR_combined_ppdet_subjet_z_R{jetR}_{subjetR}{self.suffix}{self.scaled_suffix}'
+
+    h = self.fMC.Get(name)
+    
+    c = ROOT.TCanvas("c","c: hist",600,450)
+    c.cd()
+    ROOT.gPad.SetLeftMargin(0.15)
+    ROOT.gPad.SetBottomMargin(0.15)
+    ROOT.gPad.SetRightMargin(0.15)
+    c.SetLogz()
+
+    h.GetXaxis().SetTitle('#it{p}_{T,det}^{ch jet}')
+    h.GetYaxis().SetTitle('#DeltaR_{match}')
+    
+    x_max = 200.
+    h.GetXaxis().SetRangeUser(0., x_max)
+    h.GetYaxis().SetRangeUser(0., 1.)
+    h.Draw('colz')
+    h.Scale(1e6)
+    
+    deltaR_max = jet_matching_distance * float(subjetR)
+    line = ROOT.TLine(0, deltaR_max, x_max, deltaR_max)
+    line.SetLineColor(920+2)
+    line.SetLineStyle(2)
+    line.SetLineWidth(4)
+    line.Draw()
+    
+    text = f'R = {jetR}, r = {subjetR}'
+    textFit = ROOT.TLatex()
+    textFit.SetTextSize(0.04)
+    textFit.SetNDC()
+    textFit.DrawLatex(0.62,0.8,text)
+
+    output_filename = os.path.join(self.output_dir, 'jet/{}.pdf'.format(self.remove_periods(name)))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  def plot_z1_crosscheck(self, jetR, obs_label, obs_setting, grooming_setting,
+                         xtitle, pt_bins):
+            
+    name = 'h_{}_zconst_R{}_{}_z099_1{}'.format(self.observable, jetR, obs_label, self.suffix)
+    h2D = self.fData.Get(name)
+    
+    for i in range(0, len(pt_bins) - 1):
+      min_pt_truth = pt_bins[i]
+      max_pt_truth = pt_bins[i+1]
+      
+      self.plot_z1_projection(h2D, jetR, obs_label, obs_setting, grooming_setting, xtitle, min_pt_truth, max_pt_truth)
+    
+  #---------------------------------------------------------------
+  def plot_z1_projection(self, h2D, jetR, obs_label, obs_setting,
+                            grooming_setting, xtitle, min_pt, max_pt):
+    
+    ytitle = '#frac{dN}{dz}'
+
+    # Get histogram of theta_g in data, for given pt-det cut
+    h2D.GetXaxis().SetRangeUser(min_pt, max_pt)
+    hObs_truth = h2D.ProjectionY()
+    hObs_truth.SetMarkerStyle(21)
+    hObs_truth.SetMarkerSize(1)
+    #hObs_truth.Rebin(5)
+    #hObs_truth.Scale(1., 'width')
+    if grooming_setting and 'sd' in grooming_setting:
+      hObs_truth.GetXaxis().SetRange(0, hObs_truth.GetNbinsX())
+
+    # Draw histogram
+    c = ROOT.TCanvas('c','c: hist',600,450)
+    c.cd()
+
+    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+    myPad.SetLeftMargin(0.2)
+    myPad.SetTopMargin(0.07)
+    myPad.SetRightMargin(0.04)
+    myPad.SetBottomMargin(0.13)
+    myPad.Draw()
+    myPad.cd()
+    
+    leg = ROOT.TLegend(0.7,0.75,0.85,0.85, "")
+    leg.SetFillColor(10)
+    leg.SetBorderSize(0)
+    leg.SetFillStyle(1)
+    leg.SetTextSize(0.04)
+    
+    hObs_truth.GetYaxis().SetTitle(ytitle)
+    hObs_truth.GetYaxis().SetTitleOffset(1.5)
+    hObs_truth.SetMaximum(2.5*hObs_truth.GetMaximum())
+    hObs_truth.SetMinimum(0.)
+
+    hObs_truth.Draw('hist')
+    leg.AddEntry(hObs_truth, "Data", "L")
+    leg.Draw("same")
+    
+    text_latex = ROOT.TLatex()
+    text_latex.SetNDC()
+    text = 'ALICE {}'.format(self.figure_approval_status)
+    text_latex.DrawLatex(0.3, 0.85, text)
+    
+    if self.is_pp:
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s_{NN}}} = 5.02 TeV'
+    text_latex.SetTextSize(0.045)
+    text_latex.DrawLatex(0.3, 0.79, text)
+
+    text = str(min_pt) + ' < #it{p}_{T, ch jet} < ' + str(max_pt) + ' GeV/#it{c}'
+    text_latex.DrawLatex(0.3, 0.73, text)
+
+    text = '#it{R} = ' + str(jetR) + '   | #it{{#eta}}_{{jet}}| < {:.1f}'.format(self.eta_max - jetR)
+    text_latex.DrawLatex(0.3, 0.67, text)
+    
+    subobs_label = self.formatted_subobs_label(self.observable)
+    delta = 0.
+    if subobs_label:
+      text = '{} = {}'.format(subobs_label, obs_setting)
+      text_latex.DrawLatex(0.3, 0.61, text)
+      delta = 0.07
+      
+    text = f'0.99 < {xtitle} < 1.0'
+    text_latex.DrawLatex(0.5, 0.5, text)
+      
+    output_filename = os.path.join(self.output_dir, 'z1_crosscheck/h_{}_z1_crosscheck_R{}_{}_{}-{}.pdf'.format(self.observable, self.remove_periods(jetR), obs_label, min_pt, max_pt))
+    c.SaveAs(output_filename)
+    c.Close()
+
+  #---------------------------------------------------------------
+  # Plot fraction of det-level subjets without a unique match
+  # (e.g. for pt=80-120), as a function of z
+  def plot_subjet_matching_pp(self, jetR, obs_label, obs_setting, grooming_setting,
+                              xtitle, pt_bins_reported):
+    
+    # (jet_truth.pt(), z_det, successful_match)
+    name = f'h_match_fraction_{self.observable}_R{jetR}_{obs_label}{self.scaled_suffix}'
+    h3D = self.fMC.Get(name)
+
+    # Select pt range
+    h3D.GetXaxis().SetRangeUser(80., 120.)
+    
+    # Make projection for successful_match = True or False
+    h3D_denominator = h3D.Clone(f'h_denominator_{h3D.GetName()}')
+    h_denominator = h3D_denominator.Project3D('y')
+    
+    # Make successful_match=True projection
+    h3D_numerator = h3D.Clone(f'h_numerator_{h3D.GetName()}')
+    h3D_numerator.GetZaxis().SetRange(2, 2)
+    h_numerator = h3D_numerator.Project3D('y')
+
+    h_ratio = h_numerator.Clone()
+    h_ratio.SetName(f'h_ratio_{h_numerator.GetName()}')
+    h_ratio.Divide(h_denominator)
+    
+    h_ratio.GetYaxis().SetRangeUser(0, 1.5)
+    h_ratio.SetMarkerStyle(21)
+    h_ratio.SetMarkerSize(1)
+    h_ratio.GetYaxis().SetTitle('Matching fraction')
+    text=f'Inclusive subjets R={jetR},r={obs_setting}, 80.<p_{{T,jet}}<120.'
+
+    output_filename = os.path.join(self.output_dir, f'subjet_matching_pp/h_match_fraction_{self.observable}_R{jetR}_{obs_label}{self.suffix}.pdf')
+    self.plot_hist(h_ratio, output_filename, text=text)

@@ -61,6 +61,10 @@ namespace RUtil
         TH2F* rebin_th2(TH2F & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
                         double* y_bins, int n_y_bins, bool move_y_underflow = false);
 
+        // Rebin 2D histogram h with name hname using axes given by x_bins and y_bins
+        TH2D* rebin_th2(TH2D & h_to_rebin, char* hname, double* x_bins, int n_x_bins,
+                        double* y_bins, int n_y_bins, bool move_y_underflow = false);
+
         // Rebin N-dimensional THn to a new histogram with name name_thn_rebinned using provided axes
         // WARNING: currently requires n_dim = 4
         THnF* rebin_thn(const std::string & response_file_name,
@@ -80,7 +84,20 @@ namespace RUtil
                         const double & prior_variation_parameter=0.,
                         const int & prior_option=1,
                         const bool move_underflow=false,
+                        const bool use_miss_fake=false,
                         const bool do_roounfoldresponse=true);
+
+		//------------------------------------------------------
+		// Convolution of nonperturbative shape functions
+
+		// Create and return 2D histogram, convolving h with shape function
+		TH2D* convolve_F_np(const double & Omega, const double & R, const double & beta,
+							const double* ob_bins, const int & n_ob_bins, const double* obs,
+							const double* ob_bin_width,
+							const double* pT_bins, const int & n_pT_bins, const double* pTs,
+							const TH2D & h, const std::string & name, const bool groomed = false,
+							const double & sd_beta = 0, const double & sd_zcut = 0.2,
+							const std::string & option = "");
 
     private:
         // Create empty THn using provided axes
@@ -99,11 +116,30 @@ namespace RUtil
                                const prior_scale_func prior_scale_f,
                                const bool do_roounfoldresponse=true,
                                RooUnfoldResponse* roounfold_response=nullptr,
+                               const float min_det_pt=0.,
+                               const float min_truth_pt=0.,
+                               const float min_det=0.,
+                               const float min_truth=0.,
+                               const float max_det_pt=0.,
+                               const float max_truth_pt=0.,
+                               const float max_det=0.,
+                               const float max_truth=0.,
                                const double & prior_variation_parameter=0.,
-                               const bool move_underflow=false, const std::string & label="");
+                               const bool move_underflow=false,
+                               const bool use_miss_fake=false);
 
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);
+
+		//------------------------------------------------------
+		// Convolution of nonperturbative shape functions
+
+        // Non-perturbative parameter with factored-out beta dependence
+        // Omega is Omega_{a=0} == Omega_{beta=2}  (universal[?])
+		inline double Omega_beta(const double & Omega, const double & beta);
+
+		// Shape function for convolving nonperturbative effects
+		inline double F_np(const double & Omega, const double & k, const double & beta);
 
     ClassDef(HistUtils, 1)
     };

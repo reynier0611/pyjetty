@@ -17,3 +17,4 @@ Pipfile.lock
 *.run
 pyjetty/alice_analysis/config/jet_axis/configs_broken_down_in_pT_and_jetR/round_*/
 pyjetty/alice_analysis/slurm/sbatch/jet_axis/*_R0.4_Standard_SD*.sh
+*.DS_Store

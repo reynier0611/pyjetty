@@ -42,6 +42,7 @@ import math
 import ROOT
 import yaml
 import shutil
+import hepdata_lib
 
 from pyjetty.alice_analysis.analysis.base import common_base
 from pyjetty.alice_analysis.analysis.user.substructure import analysis_utils_obs
@@ -90,6 +91,12 @@ class RunAnalysis(common_base.CommonBase):
     self.do_plot_final_result = config['do_plot_final_result']
     self.force_rebin_response=config['force_rebin']
     self.do_plot_performance = config['do_plot_performance']
+    
+    # Flag for whether to do kinematic efficiency correction in RM, or by hand
+    if 'use_miss_fake' in config:
+        self.use_miss_fake = config['use_miss_fake']
+    else:
+        self.use_miss_fake = True
     
     # Set whether pp or PbPb
     if 'constituent_subtractor' in config:
@@ -249,15 +256,19 @@ class RunAnalysis(common_base.CommonBase):
         if self.do_plot_final_result:
           # You must implement this
           self.plot_single_result(jetR, obs_label, obs_setting, grooming_setting)
-
+          
       # Plot final results for all subconfigs
       if self.do_plot_final_result:
         self.plot_all_results(jetR) # You must implement this
+        
+    # Write hepdata submission
+    if self.do_plot_final_result:
+        self.write_hepdata()
 
     # Plot additional performance plots
     if self.do_plot_performance:
       self.plot_performance() # You must implement this
-
+        
   #----------------------------------------------------------------------
   def perform_unfolding(self):
     print('Perform unfolding for all systematic variations: {} ...'.format(self.observable))
@@ -305,7 +316,7 @@ class RunAnalysis(common_base.CommonBase):
         self.observable, data, response, self.config_file, output_dir, self.file_format,
         rebin_response=rebin_response, prior_variation_parameter=prior_variation_parameter,
         truncation=truncation, binning=binning, R_max=R_max,
-        prong_matching_response=prong_matching_response)
+        prong_matching_response=prong_matching_response, use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()
       
     # Unfold thermal closure test
@@ -316,7 +327,8 @@ class RunAnalysis(common_base.CommonBase):
       
       analysis = roounfold_obs.Roounfold_Obs(
         self.observable, self.fThermal, self.fThermal, self.config_file, output_dir,
-        self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True)
+        self.file_format, rebin_response=rebin_response, R_max=R_max, thermal_model = True,
+        use_miss_fake=self.use_miss_fake)
       analysis.roounfold_obs()
 
   #----------------------------------------------------------------------
@@ -461,7 +473,10 @@ class RunAnalysis(common_base.CommonBase):
       shutil.copy(os.path.join(outputdir_test, old_name), os.path.join(outputdir, new_name))
       
       pt_det_bins = getattr(self, 'det_pt_bin_array_{}'.format(obs_label))
-      pt_det_bins = pt_det_bins[pt_det_bins.index(min_pt) : pt_det_bins.index(max_pt) + 1]
+      if min_pt < pt_det_bins[0]:
+        pt_det_bins = pt_det_bins
+      else:
+        pt_det_bins = pt_det_bins[pt_det_bins.index(min_pt) : pt_det_bins.index(max_pt) + 1]
       for i in range(len(pt_det_bins)-1):
         min_det_pt = int(pt_det_bins[i])
         max_det_pt = int(pt_det_bins[i+1])
@@ -603,6 +618,10 @@ class RunAnalysis(common_base.CommonBase):
                reg_param, int(min_pt_truth), int(max_pt_truth))
     if final:
       hSystematic_Unfolding = getattr(self, name)
+      name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                         int(min_pt_truth), int(max_pt_truth))
+      setattr(self, name, hSystematic_Unfolding)
+      
     else:
       hSystematic_Unfolding = self.construct_unfolding_uncertainty(h_unfolding_list)
       setattr(self, name, hSystematic_Unfolding)
@@ -613,7 +632,7 @@ class RunAnalysis(common_base.CommonBase):
       name = 'hSystematic_Total_R{}_{}_n{}_{}-{}'.format(
         self.utils.remove_periods(jetR), obs_label,
         reg_param, int(min_pt_truth), int(max_pt_truth))
-      hSystematic_Total = self.add_in_quadrature(h_list)
+      hSystematic_Total = self.add_in_quadrature(h_list, new_name=name)
       setattr(self, name, hSystematic_Total)
 
       # Attach total systematic to main result, and save as an attribute
@@ -686,10 +705,21 @@ class RunAnalysis(common_base.CommonBase):
         return None
     else:
       sys_label = systematic
-    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
+    if reg_param:
+        name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(
                 self.observable, sys_label, jetR, obs_label,
                 reg_param, min_pt_truth, max_pt_truth)
+    else:
+        name = 'hSystematic_{}_{}_R{}_{}_{}-{}'.format(
+                self.observable, sys_label, jetR, obs_label,
+                min_pt_truth, max_pt_truth)
+
     h_systematic_ratio = getattr(self, name)
+    
+    # Save final sys uncertainty breakdowns
+    name = 'hSystematic_{}_{}_R{}_{}_{}-{}'.format(self.observable, sys_label,
+                                   jetR, obs_label, min_pt_truth, max_pt_truth)
+    setattr(self, name, h_systematic_ratio)
 
     if self.debug_level > 0:
       output_dir = getattr(self, 'output_dir_systematics')
@@ -705,6 +735,10 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic(self, systematic, hMain, jetR, obs_label, grooming_setting,
                            reg_param, min_pt_truth, max_pt_truth, maxbin):
+                           
+    # Set whether to store signed uncertainty value or absolute value
+    # For now, only use signed uncertainty in cases where we don't average/combine multiple sources
+    signed = systematic in ['trkeff', 'fastsim_generator1']
 
     # Combine certain systematics as average or max
     if systematic == 'main':
@@ -743,11 +777,11 @@ class RunAnalysis(common_base.CommonBase):
         if grooming_setting and maxbin:
           h_systematic_ratio = self.construct_systematic_percentage(
                 h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin+1)
+                reg_param, min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
         else:
           h_systematic_ratio = self.construct_systematic_percentage(
                 h_reference, 'fastsim_generator1', jetR, obs_label,
-                reg_param, min_pt_truth, max_pt_truth, maxbin)
+                reg_param, min_pt_truth, max_pt_truth, maxbin, signed=signed)
       else:
         return None
         
@@ -788,11 +822,14 @@ class RunAnalysis(common_base.CommonBase):
       if grooming_setting and maxbin:
         h_systematic_ratio = self.construct_systematic_percentage(
               hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin+1)
+              min_pt_truth, max_pt_truth, maxbin+1, signed=signed)
       else:
         h_systematic_ratio = self.construct_systematic_percentage(
               hMain, systematic, jetR, obs_label, reg_param,
-              min_pt_truth, max_pt_truth, maxbin)
+              min_pt_truth, max_pt_truth, maxbin, signed=signed)
+              
+    name = 'hSystematic_{}_{}_R{}_{}_n{}_{}-{}'.format(self.observable, systematic, jetR, obs_label, reg_param, min_pt_truth, max_pt_truth)
+    setattr(self, name, h_systematic_ratio)
               
     return h_systematic_ratio
 
@@ -800,7 +837,7 @@ class RunAnalysis(common_base.CommonBase):
   # Get systematic variation and save percentage difference as attribte
   def construct_systematic_percentage(self, hMain, systematic, jetR,
                                       obs_label, reg_param, min_pt_truth,
-                                      max_pt_truth, maxbin):
+                                      max_pt_truth, maxbin, signed=False):
 
     name = 'h{}_{}_R{}_{}_n{}_{}-{}'.format(systematic, self.observable, jetR, obs_label,
                                             reg_param, min_pt_truth, max_pt_truth)
@@ -822,7 +859,7 @@ class RunAnalysis(common_base.CommonBase):
         print("main:", hMain.GetBinContent(i), "-- sys:", h_systematic.GetBinContent(i),
               "-- ratio:", h_systematic_ratio_temp.GetBinContent(i))
 
-    self.change_to_per(h_systematic_ratio_temp)
+    self.change_to_per(h_systematic_ratio_temp, signed=signed)
     h_systematic_ratio = self.truncate_hist(h_systematic_ratio_temp, maxbin, name_ratio)
     del h_systematic_ratio_temp   # No longer need this -- prevents memory leaks
     setattr(self, name_ratio, h_systematic_ratio)
@@ -860,11 +897,15 @@ class RunAnalysis(common_base.CommonBase):
         
     # Normalize by integral, i.e. N_jets,inclusive in this pt-bin
     
+    # First scale by bin width -- then normalize by integral
+    # (where integral weights by bin width)
+    h.Scale(1., 'width')
+
     if grooming_setting and 'sd' in grooming_setting:
     
       # If SD, the untagged jets are in the first bin
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
-      n_jets_tagged = h.Integral(2, h.GetNbinsX()+1)
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX(), 'width')
+      n_jets_tagged = h.Integral(2, h.GetNbinsX(), 'width')
       
       if store_tagging_fraction:
         f_tagging = n_jets_tagged/n_jets_inclusive
@@ -873,9 +914,9 @@ class RunAnalysis(common_base.CommonBase):
         setattr(self, f_tagging_name, f_tagging)
       
     else:
-      n_jets_inclusive = h.Integral(1, h.GetNbinsX()+1)
+      n_jets_inclusive = h.Integral(1, h.GetNbinsX(), 'width')
     
-    h.Scale(1./n_jets_inclusive, 'width')
+    h.Scale(1./n_jets_inclusive)
     
     setattr(self, name1D, h)
     
@@ -911,6 +952,7 @@ class RunAnalysis(common_base.CommonBase):
     myBlankHisto.SetXTitle( getattr(self, 'xtitle') )
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle('Systematic uncertainty (%)')
+
     myBlankHisto.SetMaximum(1.7*h_total.GetMaximum(h_total.GetMaximum()-0.001))
     if h_total.GetMaximum() > 100:
       myBlankHisto.SetMaximum(50)
@@ -987,10 +1029,13 @@ class RunAnalysis(common_base.CommonBase):
     c.SaveAs(outputFilename)
     c.Close()
 
-    sys_root_filename = os.path.join(output_dir, 'fSystematics.root')
-    fSystematics = ROOT.TFile(sys_root_filename, 'UPDATE')
-    h_total.Write()
-    fSystematics.Close()
+    if not suffix:
+        sys_root_filename = os.path.join(output_dir, 'fSystematics.root')
+        fSystematics = ROOT.TFile(sys_root_filename, 'UPDATE')
+        h_total.Write()
+        for h in h_list:
+            h.Write()
+        fSystematics.Close()
 
   #----------------------------------------------------------------------
   # Returns truncated 1D histogram from bins [1, ..., maxbin] inclusive
@@ -1012,10 +1057,12 @@ class RunAnalysis(common_base.CommonBase):
   #----------------------------------------------------------------------
   # Add a list of (identically-binned) histograms in quadrature, bin-by-bin
   #----------------------------------------------------------------------
-  def add_in_quadrature(self, h_list):
+  def add_in_quadrature(self, h_list, new_name=None):
 
     h_new = h_list[0].Clone()
-    h_new.SetName('{}_new'.format(h_list[0].GetName()))
+    if not new_name:
+        new_name = '{}_new'.format(h_list[0].GetName())
+    h_new.SetName(new_name)
 
     for i in range(1, h_new.GetNbinsX()+1):
 
@@ -1088,13 +1135,126 @@ class RunAnalysis(common_base.CommonBase):
     return index_min + min_reg_param
 
     f.Close()
+    
+  #----------------------------------------------------------------------
+  # Write HEPData submission
+  # You can test it here: https://www.hepdata.net/record/sandbox
+  #
+  # You will want to edit the tables slightly to add observable-specific info:
+  #   units, description, etc.
+  #----------------------------------------------------------------------
+  def write_hepdata(self):
+  
+    # Create submission
+    self.hepdata_dir = os.path.join(getattr(self, 'output_dir_final_results'), 'hepdata')
+    self.hepdata_submission = hepdata_lib.Submission()
+  
+    # Loop through jet radii
+    for jetR in self.jetR_list:
+
+      # Loop through subconfigurations
+      for i, subconfig in enumerate(self.obs_subconfig_list):
+
+        obs_setting = self.obs_settings[i]
+        grooming_setting = self.grooming_settings[i]
+        obs_label = self.obs_labels[i]
+
+        # Loop through pt slices, and add table for each result
+        for bin in range(0, len(self.pt_bins_reported) - 1):
+          min_pt_truth = self.pt_bins_reported[bin]
+          max_pt_truth = self.pt_bins_reported[bin+1]
+          
+          self.add_hepdata_table(jetR, obs_label, obs_setting, grooming_setting,
+                                 min_pt_truth, max_pt_truth)
+      
+    # Write submission files
+    self.hepdata_submission.create_files(self.hepdata_dir)
 
   #----------------------------------------------------------------------
-  def change_to_per(self, h):
+  def add_hepdata_table(self, jetR, obs_label, obs_setting, grooming_setting, min_pt, max_pt):
+  
+    table = hepdata_lib.Table('Table R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label, min_pt, max_pt))
+    table.location = 'Figure X. '
+    if grooming_setting and 'sd' in grooming_setting.keys():
+        table.description = 'Note: first bin corresponds to untagged fraction'
+    else:
+        table.description = 'Description...'
+    table.keywords["reactions"] = ['P P --> jet+X']
+    table.keywords["cmenergies"] = ['5020']
+ 
+    # Create readers to read histograms
+    final_result_root_filename = os.path.join(getattr(self, 'output_dir_final_results'), 'fFinalResults.root')
+    hepdata_reader = hepdata_lib.RootFileReader(final_result_root_filename)
+ 
+    systematics_root_filename = os.path.join(self.output_dir_systematics, 'fSystematics.root')
+    hepdata_reader_systematics = hepdata_lib.RootFileReader(systematics_root_filename)
+ 
+    # Define variables
+    h_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt, max_pt)
+    h = hepdata_reader.read_hist_1d(h_name)
+ 
+    x = hepdata_lib.Variable(self.observable, is_independent=True, is_binned=True, units='()')
+    x.values = h['x_edges']
+ 
+    y = hepdata_lib.Variable('$d^{2}\sigma/dX$', is_independent=False, is_binned=False, units='()')
+    y.values = h['y']
+    y.add_qualifier('SQRT(S)', 5.02, 'TeV')
+    y.add_qualifier('ETARAP', '|0.9-R|')
+    y.add_qualifier('jet radius', jetR)
+    y.add_qualifier('jet method', 'Anti-$k_{T}$')
+ 
+    # Define uncertainties
+    stat = hepdata_lib.Uncertainty('stat', is_symmetric=True)
+    stat.values = h['dy']
+ 
+    # Add tables to submission
+    table.add_variable(x)
+    table.add_variable(y)
+    y.add_uncertainty(stat)
+ 
+    # Add unfolding systematic
+    name = 'hSystematic_Unfolding_R{}_{}_{}-{}'.format(self.utils.remove_periods(jetR), obs_label,
+                                                      int(min_pt), int(max_pt))
+    h_sys_unfolding = hepdata_reader_systematics.read_hist_1d(getattr(self, name).GetName())
+    sys_unfolding = hepdata_lib.Uncertainty('sys,unfolding', is_symmetric=True)
+    sys_unfolding.values = ['{}{}'.format(y,'%') for y in h_sys_unfolding['y']]
+    y.add_uncertainty(sys_unfolding)
+ 
+    # Add systematic uncertainty breakdown
+    for systematic in self.systematics_list:
+ 
+        if systematic in ['main', 'prior1', 'truncation', 'binning']:
+            continue
+
+        h_sys = self.retrieve_systematic(systematic, jetR, obs_label,
+                                         None, min_pt, max_pt)
+        if not h_sys:
+            continue
+            
+        if 'generator' in systematic:
+          sys_label = 'generator'
+        else:
+          sys_label = systematic
+        
+        h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
+        sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
+        sys.values = ['{}{}'.format(y,'%') for y in h_sys['y']]
+        y.add_uncertainty(sys)
+ 
+    # Add table to the submission
+    self.hepdata_submission.add_table(table)
+
+  #----------------------------------------------------------------------
+  def change_to_per(self, h, signed=False):
 
     for bin in range(0, h.GetNbinsX()+2):
       content = h.GetBinContent(bin)
-      content_new = math.fabs(1-content)
+      
+      if signed:
+        content_new = 1-content
+      else:
+        content_new = math.fabs(1-content)
+
       h.SetBinContent(bin, content_new*100)
 
   #----------------------------------------------------------------------

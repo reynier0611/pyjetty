@@ -65,7 +65,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     for observable in self.observable_list:
 
       for subjetR in self.obs_settings[observable]:
-      
+        
+        obs_label = self.utils.obs_label(subjetR, None)      
+
         if (jetR - subjetR) < 1e-3:
           continue
       
@@ -78,7 +80,7 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
         
         if self.thermal_model:
           for R_max in self.max_distance:
-            name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, grooming_label, subjetR)
+            name = 'h_{}_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, obs_label, R_max)
             h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0, 1.0)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#z_{r}')
@@ -92,18 +94,18 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
             # Subjet matching histograms -- only need one set for inclusive/leading
             if observable == self.observable_list[0]:
               name = 'hDeltaR_combined_ppdet_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
               setattr(self, name, h)
               
               name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}_Rmax{}'.format(jetR, subjetR, R_max)
-              h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+              h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
               setattr(self, name, h)
               
             # Plot deltaR distribution between the truth-detector leading subjets
             # (since they are not matched geometrically, and can contain "swaps")
             if 'leading' in observable:
               name = 'hDeltaR_det_truth_{}_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-              h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+              h = ROOT.TH3F(name, name, 200, 0, 200, 100, 0, 1.0, 50, 0., 1.)
               h.GetXaxis().SetTitle('p_{T,ch jet}')
               h.GetYaxis().SetTitle('#it{z_{r}}')
               h.GetZaxis().SetTitle('#DeltaR')
@@ -111,21 +113,21 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
                         
             # Create prong matching histograms
             name = 'h_{}_matched_pt_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 100, 0, 1.0, 10, 0., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0, 1.0, 10, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('#it{z_{r,det}}')
             h.GetZaxis().SetTitle('Matched p_{T,det} fraction')
             setattr(self, name, h)
             
             name = 'h_{}_matched_pt_deltaZ_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, -1., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 10, 0, 1.0, 100, -1., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
             h.GetZaxis().SetTitle('#Delta#it{z_{r}}')
             setattr(self, name, h)
             
             name = 'h_{}_matched_pt_deltaR_JetPt_R{}_{}_Rmax{}'.format(observable, jetR, subjetR, R_max)
-            h = ROOT.TH3F(name, name, 30, 0, 300, 10, 0, 1.0, 100, 0., 1.)
+            h = ROOT.TH3F(name, name, 20, 0, 200, 10, 0, 1.0, 100, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet,truth}')
             h.GetYaxis().SetTitle('Matched p_{T,det} fraction')
             h.GetZaxis().SetTitle('#Delta#it{R}')
@@ -136,18 +138,27 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           # Subjet matching histograms -- only need one set for inclusive/leading
           if observable == self.observable_list[0]:
             name = 'hDeltaR_ppdet_pptrue_subjet_z_R{}_{}'.format(jetR, subjetR)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            h = ROOT.TH2F(name, name, 200, 0, 200, 100, 0., 2.)
             setattr(self, name, h)
             
           # Plot deltaR distribution between the truth-detector leading subjets
           # (since they are not matched geometrically, and can contain "swaps")
           if 'leading' in observable:
             name = 'hDeltaR_det_truth_{}_R{}_{}'.format(observable, jetR, subjetR)
-            h = ROOT.TH3F(name, name, 300, 0, 300, 100, 0, 1.0, 50, 0., 1.)
+            h = ROOT.TH3F(name, name, 200, 0, 200, 100, 0, 1.0, 50, 0., 1.)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
             h.GetYaxis().SetTitle('#it{z_{r}}')
             h.GetZaxis().SetTitle('#DeltaR')
             setattr(self, name, h)
+            
+          # Plot fraction of det-level subjets without a unique match, as a function of z
+          if 'inclusive' in observable:
+              name = 'h_match_fraction_{}_R{}_{}'.format(observable, jetR, subjetR)
+              h = ROOT.TH3F(name, name, 20, 0, 200, 100, 0, 1.0, 2, 0., 2.)
+              h.GetXaxis().SetTitle('p_{T,ch jet}')
+              h.GetYaxis().SetTitle('#it{z_{r}}')
+              h.GetZaxis().SetTitle('match')
+              setattr(self, name, h)
 
       # Residuals and responses
       for subjetR in self.obs_settings[observable]:
@@ -179,9 +190,9 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
     # Create THn of response for subjet z
     dim = 4;
     title = ['p_{T,det}', 'p_{T,truth}', 'z_{r,det}', 'z_{r,truth}']
-    nbins = [30, 30, 100, 50]
+    nbins = [30, 20, 100, 100]
     min = [0., 0., 0., 0.]
-    max = [150., 300., 1., 1.]
+    max = [150., 200., 1., 1.]
     name = 'hResponse_JetPt_{}_R{}_{}{}'.format(observable, jetR, subjetR, suffix)
     self.create_thn(name, title, dim, nbins, min, max)
     
@@ -226,12 +237,17 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
   def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
-                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
        
     if (jetR - obs_setting) < 1e-3:
       return
+      
+    # If jetscape, we will need to correct substructure observable for holes (pt is corrected in base class)
+    if self.jetscape:
+        holes_in_det_jet = kwargs['holes_in_det_jet']
+        holes_in_truth_jet = kwargs['holes_in_truth_jet']
        
-    # Find subjets
+    # Find all subjets
     subjetR = obs_setting
     cs_subjet_det = fj.ClusterSequence(jet_det.constituents(), self.subjet_def[subjetR])
     subjets_det = fj.sorted_by_pt(cs_subjet_det.inclusive_jets())
@@ -264,14 +280,27 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
       if 'inclusive' in observable:
 
         for subjet_det in subjets_det:
+        
+          z_det = subjet_det.pt() / jet_det.pt()
+          
+          # If z=1, it will be default be placed in overflow bin -- prevent this
+          if np.isclose(z_det, 1.):
+            z_det = 0.999
+          
+          successful_match = False
 
           if subjet_det.has_user_info():
             subjet_truth = subjet_det.python_info().match
           
             if subjet_truth:
+            
+              successful_match = True
               
-              z_det = subjet_det.pt() / jet_det.pt()
               z_truth = subjet_truth.pt() / jet_truth.pt()
+              
+              # If z=1, it will be default be placed in overflow bin -- prevent this
+              if np.isclose(z_truth, 1.):
+                z_truth = 0.999
               
               # In Pb-Pb case, fill matched pt fraction
               if not self.is_pp:
@@ -285,6 +314,11 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
               # meaningful for leading subjets
               self.fill_response(observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                                  z_det, z_truth, obs_label, R_max, prong_match=False)
+                                 
+          # Fill number of subjets with/without unique match, as a function of zr
+          if self.is_pp:
+            name = 'h_match_fraction_{}_R{}_{}'.format(observable, jetR, subjetR)
+            getattr(self, name).Fill(jet_truth.pt(), z_det, successful_match)
                                
       # Get leading subjet and fill histograms
       if 'leading' in observable:
@@ -298,6 +332,12 @@ class ProcessMC_subjet_z(process_mc_base.ProcessMCBase):
           
           z_leading_det = leading_subjet_det.pt() / jet_det.pt()
           z_leading_truth = leading_subjet_truth.pt() / jet_truth.pt()
+          
+          # If z=1, it will be default be placed in overflow bin -- prevent this
+          if np.isclose(z_leading_det, 1.):
+            z_leading_det = 0.999
+          if np.isclose(z_leading_truth, 1.):
+            z_leading_truth = 0.999
           
           # In Pb-Pb case, fill matched pt fraction
           if not self.is_pp:

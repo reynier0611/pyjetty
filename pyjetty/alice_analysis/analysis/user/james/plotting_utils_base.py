@@ -110,6 +110,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     h.GetXaxis().SetRangeUser(0., x_max)
     h.GetYaxis().SetRangeUser(0., 1.)
     h.Draw('colz')
+    h.Scale(1e6)
     
     deltaR_max = jet_matching_distance * jetR
     line = ROOT.TLine(0, deltaR_max, x_max, deltaR_max)
@@ -255,7 +256,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
   
   #---------------------------------------------------------------
   def plot_jet_reco_efficiency(self, jetR, obs_label):
-      
+
     # For each pT^gen, compute the fraction of matched pT^gen
     
     # First, get the pT^gen spectrum
@@ -433,7 +434,7 @@ class PlottingUtilsBase(analysis_utils_obs.AnalysisUtils_Obs):
     elif '{z}_{g}' in xtitle:
       obs_true_list = [0.2, 0.3, 0.4, 0.5]
     elif 'z_{r}' in xtitle:
-      obs_true_list = [0., 0.2, 0.4, 0.8, 0.8, 1.]
+      obs_true_list = [0., 0.2, 0.4, 0.6, 0.8, 1.]
 
     for i in range(0, len(obs_true_list) - 1):
       min_obs_truth = obs_true_list[i]

@@ -35,7 +35,8 @@ class ProcessIO(common_base.CommonBase):
   def __init__(self, input_file='', tree_dir='PWGHF_TreeCreator',
                track_tree_name='tree_Particle', event_tree_name='tree_event_char',
                output_dir='', is_pp=True, min_cent=0., max_cent=10.,
-               use_ev_id_ext=True, **kwargs):
+               use_ev_id_ext=True, is_jetscape=False, holes=False,
+               event_plane_range=None, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -46,6 +47,9 @@ class ProcessIO(common_base.CommonBase):
     self.event_tree_name = event_tree_name
     self.is_pp = is_pp
     self.use_ev_id_ext = use_ev_id_ext
+    self.is_jetscape = is_jetscape
+    self.holes = holes
+    self.event_plane_range = event_plane_range
     if len(output_dir) and output_dir[-1] != '/':
       self.output_dir += '/'
     self.reset_dataframes()
@@ -61,9 +65,13 @@ class ProcessIO(common_base.CommonBase):
       self.event_columns += ['centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
+    if is_jetscape:
+      self.event_columns += ['event_plane_angle']
     
     # Set relevant columns of track tree
     self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
+    if is_jetscape:
+        self.track_columns += ['status']
     
     #print(self)
     
@@ -137,6 +145,8 @@ class ProcessIO(common_base.CommonBase):
       event_criteria = 'is_ev_rej == 0'
     else:
       event_criteria = 'is_ev_rej == 0 and centrality > @self.min_centrality and centrality < @self.max_centrality'
+    if self.event_plane_range:
+      event_criteria += ' and event_plane_angle > @self.event_plane_range[0] and event_plane_angle < @self.event_plane_range[1]'
     event_df = self.event_df_orig.query(event_criteria)
     event_df.reset_index(drop=True)
 
@@ -148,6 +158,15 @@ class ProcessIO(common_base.CommonBase):
     if not track_tree:
       sys.exit('Tree {} not found in file {}'.format(track_tree_name, self.input_file))
     track_df_orig = track_tree.pandas.df(self.track_columns)
+    
+    # Apply hole selection, in case of jetscape
+    if self.is_jetscape:
+        if self.holes:
+            track_criteria = 'status == -1'
+        else:
+            track_criteria = 'status == 0'
+        track_df_orig = track_df_orig.query(track_criteria)
+        track_df_orig.reset_index(drop=True)
     
     # Check if there are duplicated tracks
     #print(track_df_orig)
@@ -175,7 +194,7 @@ class ProcessIO(common_base.CommonBase):
   # with the same formatting and saves to class's output_file.
   # histograms is list of tuples: [ ("title", np.histogram), ... ]
   #---------------------------------------------------------------
-  def save_dataframe(self, filename, df, df_true=False, histograms=[]):
+  def save_dataframe(self, filename, df, df_true=False, histograms=[], is_jetscape=False):
 
     # Create output directory if it does not already exist
     if not os.path.exists(self.output_dir):
@@ -184,34 +203,62 @@ class ProcessIO(common_base.CommonBase):
     # Open output directory and (re)create rootfile
     with uproot.recreate(self.output_dir + filename) as f:
 
+      branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
+                      "ParticleEta": float, "ParticlePhi": float}
+      if is_jetscape:
+        branchdict["status"] = int
+
       if df_true:
         # Create tree with truth particle info
         title = 'tree_Particle_gen'
-        branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
-                      "ParticleEta": float, "ParticlePhi": float}
         print("Length of truth track tree: %i" % len(self.track_df))
         f[title] = uproot.newtree(branchdict, title=title)
-        f[title].extend( { "run_number": self.track_df["run_number"],
-                           "ev_id": self.track_df["ev_id"], 
-                           "ParticlePt": self.track_df["ParticlePt"],
-                           "ParticleEta": self.track_df["ParticleEta"],
-                           "ParticlePhi": self.track_df["ParticlePhi"] } )
+        if is_jetscape:
+            f[title].extend( { "run_number": self.track_df["run_number"],
+                               "ev_id": self.track_df["ev_id"],
+                               "ParticlePt": self.track_df["ParticlePt"],
+                               "ParticleEta": self.track_df["ParticleEta"],
+                               "ParticlePhi": self.track_df["ParticlePhi"],
+                               "status": self.track_df["status"] } )
+        else:
+            f[title].extend( { "run_number": self.track_df["run_number"],
+                               "ev_id": self.track_df["ev_id"],
+                               "ParticlePt": self.track_df["ParticlePt"],
+                               "ParticleEta": self.track_df["ParticleEta"],
+                               "ParticlePhi": self.track_df["ParticlePhi"] } )
 
       # Create tree with detector-level particle info
       title = 'tree_Particle'
-      branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
-                    "ParticleEta": float, "ParticlePhi": float}
       print("Length of detector-level track tree: %i" % len(df))
       f[title] = uproot.newtree(branchdict, title=title)
-      f[title].extend( { "run_number": df["run_number"], "ev_id": df["ev_id"], 
-                         "ParticlePt": df["ParticlePt"], "ParticleEta": df["ParticleEta"],
-                         "ParticlePhi": df["ParticlePhi"] } )
+      if is_jetscape:
+        f[title].extend( { "run_number": df["run_number"],
+                           "ev_id": df["ev_id"],
+                           "ParticlePt": df["ParticlePt"],
+                           "ParticleEta": df["ParticleEta"],
+                           "ParticlePhi": df["ParticlePhi"],
+                           "status": df["status"] } )
+      else:
+        f[title].extend( { "run_number": df["run_number"],
+                           "ev_id": df["ev_id"],
+                           "ParticlePt": df["ParticlePt"],
+                           "ParticleEta": df["ParticleEta"],
+                           "ParticlePhi": df["ParticlePhi"] } )
 
       # Create tree with event char
       title = self.event_tree_name
       branchdict = {"is_ev_rej": int, "run_number": int, "ev_id": int, "z_vtx_reco": float}
+      if is_jetscape:
+        branchdict["event_plane_angle"] = float
       f[title] = uproot.newtree(branchdict, title=title)
-      f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+      if is_jetscape:
+        f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
+                        "run_number": self.event_df_orig["run_number"], 
+                        "ev_id": self.event_df_orig["ev_id"],
+                        "z_vtx_reco": self.event_df_orig["z_vtx_reco"],
+                        "event_plane_angle": self.event_df_orig["event_plane_angle"] } )
+      else:
+        f[title].extend( {"is_ev_rej": self.event_df_orig["is_ev_rej"], 
                         "run_number": self.event_df_orig["run_number"], 
                         "ev_id": self.event_df_orig["ev_id"],
                         "z_vtx_reco": self.event_df_orig["z_vtx_reco"] } )

@@ -206,11 +206,11 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       if grooming_setting and 'sd' in grooming_setting:
       
         # If SD, the untagged jets are in the first bin
-        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX())
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX()+1)
         
       else:
-        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX()+1)
+        n_jets_inclusive = hPythia.Integral(1, hPythia.GetNbinsX())
         n_jets_tagged = hPythia.Integral(hPythia.FindBin(self.truth_bin_array(obs_label)[0]), hPythia.GetNbinsX())
 
     elif plot_pythia_from_mateusz:
@@ -220,7 +220,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       print(fPythia.ls())
       hname = 'histogram_h_{}_B{}_{}-{}'.format(self.observable, obs_label, int(min_pt_truth), int(max_pt_truth))
       hPythia = fPythia.Get(hname)
-      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX()+1)
+      n_jets_inclusive = hPythia.Integral(0, hPythia.GetNbinsX())
       n_jets_tagged = hPythia.Integral(hPythia2.FindBin(self.truth_bin_array(obs_label)[0]), hPythia2.GetNbinsX())
       
     fraction_tagged_pythia =  n_jets_tagged/n_jets_inclusive
@@ -293,8 +293,33 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     self.utils.setup_legend(myLegend,0.05)
     
     name = 'hmain_{}_R{}_{{}}_{}-{}'.format(self.observable, jetR, min_pt_truth, max_pt_truth)
-    ymax = self.get_maximum(name, overlay_list)
+    ymax = 2*self.get_maximum(name, overlay_list)
+    ymin = 2e-4
+    ymax_ratio = 1.99
+    if self.observable == 'leading_subjet_z':
+        ymax = 16.99
+        ymin = 1e-3
+        ymax_ratio = 1.99
+    if self.observable == 'inclusive_subjet_z':
+        ymax = 2e3
+        ymin = 2e-1
+        pad1.SetLogy()
+        ymax_ratio = 1.99
+    
+    # Get xmin and xmax over all hists
+    xmin = 1
+    xmax = 0
+    for i, subconfig_name in enumerate(self.obs_subconfig_list):
+      if subconfig_name not in overlay_list:
+        continue
+      xmin_temp = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
+      xmax_temp = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
+      if xmin_temp < xmin:
+        xmin = xmin_temp
+      if xmax_temp > xmax:
+        xmax = xmax_temp
       
+    # Loop through hists
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
       if subconfig_name not in overlay_list:
@@ -325,6 +350,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       h.SetLineStyle(1)
       h.SetLineWidth(2)
       h.SetLineColor(color)
+      h.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
       
       h_sys = getattr(self, 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, jetR, obs_label, min_pt_truth, max_pt_truth))
       h_sys.SetLineColor(0)
@@ -332,24 +358,23 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       h_sys.SetFillColorAlpha(color, 0.3)
       h_sys.SetFillStyle(1001)
       h_sys.SetLineWidth(0)
+      h_sys.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
       
       if subconfig_name == overlay_list[0]:
 
         pad1.cd()
         xtitle = getattr(self, 'xtitle')
         ytitle = getattr(self, 'ytitle')
-        xmin = self.obs_config_dict[subconfig_name]['obs_bins_truth'][0]
-        xmax = self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1]
         myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', 1, xmin, xmax)
         myBlankHisto.SetNdivisions(505)
         myBlankHisto.GetXaxis().SetTitleSize(0.085)
         myBlankHisto.SetXTitle(xtitle)
         myBlankHisto.GetYaxis().SetTitleOffset(1.5)
         myBlankHisto.SetYTitle(ytitle)
-        myBlankHisto.SetMaximum(2*ymax)
-        myBlankHisto.SetMinimum(0.)
+        myBlankHisto.SetMaximum(ymax)
+        myBlankHisto.SetMinimum(ymin)
         if plot_ratio:
-          myBlankHisto.SetMinimum(2e-4) # Don't draw 0 on top panel
+          myBlankHisto.SetMinimum(ymin) # Don't draw 0 on top panel
           myBlankHisto.GetYaxis().SetTitleSize(0.075)
           myBlankHisto.GetYaxis().SetTitleOffset(1.2)
           myBlankHisto.GetYaxis().SetLabelSize(0.06)
@@ -382,7 +407,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           myBlankHisto2.GetYaxis().SetLabelFont(43)
           myBlankHisto2.GetYaxis().SetLabelSize(25)
           myBlankHisto2.GetYaxis().SetNdivisions(505)
-          myBlankHisto2.GetYaxis().SetRangeUser(0., 1.99)
+          
+          myBlankHisto2.GetYaxis().SetRangeUser(0., ymax_ratio)
           myBlankHisto2.Draw()
         
           line = ROOT.TLine(xmin,1,xmax,1)
@@ -404,6 +430,8 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
           hPythia.SetLineColor(color)
           hPythia.SetLineColorAlpha(color, 0.5)
           hPythia.SetLineWidth(4)
+          
+        hPythia.GetXaxis().SetRangeUser(self.obs_config_dict[subconfig_name]['obs_bins_truth'][0], self.obs_config_dict[subconfig_name]['obs_bins_truth'][-1])
 
       if plot_nll:
         
@@ -427,7 +455,66 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         g.SetLineWidth(4)
         g.SetFillColor(color)
         g.SetFillColorAlpha(color, 0.5)
-      
+
+      # Scale inclusive subjets to N_jets rather than N_subjets -- fill in by hand for now
+      z_min = 0.71
+      if self.observable == 'leading_subjet_z':
+        
+        integral_total = h.Integral(1, h.GetNbinsX(), 'width')
+        print(f'integral_total, leading_subjet_z, {obs_label}: {integral_total}')
+        h.Scale(1./integral_total)
+        h_sys.Scale(1./integral_total)
+        
+        integral_total_pythia = hPythia.Integral(1, hPythia.GetNbinsX(), 'width')
+        print(f'integral_total_pythia, leading_subjet_z, {obs_label}: {integral_total_pythia}')
+        hPythia.Scale(1./integral_total_pythia)
+        
+        integral = h.Integral(h.FindBin(z_min), h.GetNbinsX(), 'width')
+        print(f'integral, leading_subjet_z, {obs_label}: {integral}')
+        
+        integral_pythia = hPythia.Integral(hPythia.FindBin(z_min), hPythia.GetNbinsX(), 'width')
+        print(f'integral_pythia, leading_subjet_z, {obs_label}: {integral_pythia}')
+        
+      if self.observable == 'inclusive_subjet_z':
+        
+        if np.isclose(float(obs_label), 0.1):
+            integral_leading_subjet = 0.7865922387180659 # R=0.4, r=0.1
+            integral_leading_subjet_pythia = 0.7441921938539977
+        elif np.isclose(float(obs_label), 0.2):
+            integral_leading_subjet = 0.9365660517984986 # R=0.4, r=0.2
+            integral_leading_subjet_pythia = 0.9296991675820692
+
+        integral = h.Integral(h.FindBin(z_min), h.GetNbinsX(), 'width')
+        print(f'integral, inclusive_subjet_z, {obs_label}: {integral}')
+        normalization = integral_leading_subjet / integral
+        print(f'normalization: {normalization}')
+        h.Scale(normalization)
+        h_sys.Scale(normalization)
+
+        integral_pythia = hPythia.Integral(hPythia.FindBin(z_min), hPythia.GetNbinsX(), 'width')
+        print(f'integral_pythia, inclusive_subjet_z, {obs_label}: {integral_pythia}')
+        normalization_pythia = integral_leading_subjet_pythia / integral_pythia
+        print(f'normalization_pythia: {normalization_pythia}')
+        hPythia.Scale(normalization_pythia)
+        
+      # Compute <N_subjets>
+      n_subjets = h.Integral(1, h.GetNbinsX(), 'width')
+      print(f'<N_subjets>, {obs_label}: {n_subjets}')
+        
+      # Compute z_loss for leading subjets
+      # Should come up with a better way to decide bin center
+      z_moment = 0.
+      if self.observable == 'leading_subjet_z':
+        for i in range(1, h.GetNbinsX()+1):
+            zr = h.GetBinCenter(i)
+            content = h.GetBinContent(i)
+            width =  h.GetXaxis().GetBinWidth(i)
+            z_moment += zr*content*width
+            #print(f'bin: {i} (zr = {zr}, width = {width}): content = {content} -- {zr*content*width}')
+        z_loss = 1 - z_moment
+        #print(z_moment)
+        #print(f'z_loss for r={obs_label}: {1-z_moment}')
+
       if plot_ratio:
         hRatioSys = h_sys.Clone()
         hRatioSys.SetName('{}_Ratio'.format(h_sys.GetName()))
@@ -462,7 +549,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
         hRatioStat.SetLineColor(color)
 
       pad1.cd()
-      
+
       if plot_pythia:
         plot_errors = False
         if plot_errors:
@@ -491,6 +578,25 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       if grooming_setting:
         text += self.utils.formatted_grooming_label(grooming_setting, verbose=True)
       myLegend.AddEntry(h, '{}'.format(text), 'pe')
+      
+      if self.observable == 'leading_subjet_z':
+          pad1.cd()
+          text_latex = ROOT.TLatex()
+          text_latex.SetNDC()
+          text_latex.SetTextSize(0.05)
+          x = 0.3
+          y = 0.3 - 0.7*float(obs_setting)
+          text = f'< #it{{z}}_{{loss}}^{{{subobs_label} = {obs_setting}}} > = {np.round(z_loss,2):.2f}'
+          text_latex.DrawLatex(x, y, text)
+      elif self.observable == 'inclusive_subjet_z':
+          pad1.cd()
+          text_latex = ROOT.TLatex()
+          text_latex.SetNDC()
+          text_latex.SetTextSize(0.05)
+          x = 0.67
+          y = 0.85 - 0.7*float(obs_setting)
+          text = f'< #it{{N}}_{{subjets}}^{{{subobs_label} = {obs_setting}}} > = {np.round(n_subjets,2):.1f}'
+          text_latex.DrawLatex(x, y, text)
         
     pad1.cd()
     myLegend.AddEntry(h_sys, 'Sys. uncertainty', 'f')
@@ -502,10 +608,10 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
     text_latex = ROOT.TLatex()
     text_latex.SetNDC()
     
-    text_latex.SetTextSize(0.07)
+    text_latex.SetTextSize(0.06)
     x = 0.25
     y = 0.86
-    text = 'ALICE {}'.format(self.figure_approval_status)
+    text = '#bf{{ALICE}} {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(x, y, text)
     
     text_latex.SetTextSize(0.055)
@@ -536,6 +642,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
       rg_axis.SetLabelOffset(0.015)
       rg_axis.Draw()
 
+
     name = 'h_{}_R{}_{}-{}_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
     if plot_pythia:
       name = 'h_{}_R{}_{}-{}_Pythia_{}{}'.format(self.observable, self.utils.remove_periods(jetR), int(min_pt_truth), int(max_pt_truth), i_config, self.file_format)
@@ -551,7 +658,7 @@ class RunAnalysisJamesBase(run_analysis.RunAnalysis):
   #----------------------------------------------------------------------
   # Return maximum y-value of unfolded results in a subconfig list
   def get_maximum(self, name, overlay_list):
-  
+
     max = 0.
     for i, subconfig_name in enumerate(self.obs_subconfig_list):
     
