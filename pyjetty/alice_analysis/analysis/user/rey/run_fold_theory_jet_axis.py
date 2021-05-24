@@ -42,7 +42,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
         obs_setting = self.obs_settings[i]            # labels such as 'Standard_WTA'
         grooming_setting = self.grooming_settings[i]  # grooming parameters
         if grooming_setting and 'SD' in obs_setting:
-          label = obs_setting[:-4]
+          label = obs_setting[:obs_setting.find('SD_')]
           label += self.utils.grooming_label(grooming_setting)
         else:
           label = obs_setting 
@@ -171,6 +171,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
              h1_original_hist.Write()
              setattr(self,projection_name,h1_original_hist)
 
+        new_obs_lab = obs_setting
+        if grooming_setting:
+          new_obs_lab += '_'
+          new_obs_lab += self.utils.grooming_label(grooming_setting)
+
         # Do the loop backwards and find min and max histograms
         for n_pt in range(0,len(self.final_pt_bins)-1):
           histo_list = []
@@ -183,14 +188,14 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           name_central = 'h1_original_%s_R%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
           h_central = getattr(self,name_central)
           graph = self.histo_to_graph(h_central,hist_min,hist_max)
-          name_graph = 'g_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          name_graph = 'g_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
           graph.SetName(name_graph)
 
           graph_min = ROOT.TGraph(hist_min)
-          graph_min.SetName('g_min_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_min.SetName('g_min_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
           graph_max = ROOT.TGraph(hist_max)
-          graph_max.SetName('g_max_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_max.SetName('g_max_original_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
           self.outfile.cd()
           hist_min.Write()

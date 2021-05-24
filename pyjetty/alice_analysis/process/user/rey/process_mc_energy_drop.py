@@ -200,7 +200,7 @@ class ProcessMC_energy_drop(process_mc_base.ProcessMCBase):
   def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
                                   jet_truth_groomed_lund, jet_pp_det, jetR,
                                   obs_setting, grooming_setting, obs_label,
-                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix):
+                                  jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
     
     # Compute groomed observables
     jet_groomed_det = jet_det_groomed_lund.pair()

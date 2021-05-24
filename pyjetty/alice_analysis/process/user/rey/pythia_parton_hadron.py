@@ -227,12 +227,12 @@ class pythia_parton_hadron(process_base.ProcessBase):
                 # Create THn of response
                 dim = 4
                 title = ['p_{T}^{ch jet}', 'p_{T}^{parton jet}',obs_label+'^{ch}', obs_label+'^{parton}']
-                nbins = [28, 28, 80, 80]
+                nbins = [28, 28, 90, 90]
                 min_li = [ 10.,  10., 0.     , 0.     ]
                 max_li = [150., 150., max_obs, max_obs]
-                if grooming_setting:
-                  min_li[2] = -max_obs/10.
-                  min_li[3] = -max_obs/10.
+                #if grooming_setting:
+                #  min_li[2] = -max_obs/10.
+                #  min_li[3] = -max_obs/10.
 
                 nbins = (nbins)
                 xmin = (min_li)

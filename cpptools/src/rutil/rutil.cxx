@@ -188,7 +188,7 @@ namespace RUtil
                                 do_roounfoldresponse, roounfold_response,
                                 min_det_pt, min_truth_pt, min_det, min_truth,
                                 max_det_pt, max_truth_pt, max_det, max_truth, 
-                                prior_variation_parameter, move_underflow, use_miss_fake);
+                                prior_variation_parameter, move_underflow, use_miss_fake, label);
 
         return thn_rebinned;
 
@@ -282,7 +282,7 @@ namespace RUtil
         const float min_det_pt, const float min_truth_pt, const float min_det, const float min_truth,
         const float max_det_pt, const float max_truth_pt, const float max_det, const float max_truth,
         const double & prior_variation_parameter/*=0.*/, const bool move_underflow/*=false*/,
-        const bool use_miss_fake/*=false*/) {
+        const bool use_miss_fake/*=false*/,const std::string & label) {
 
         // Only working for n_dim == 4 at the moment; generalizing to N dimensions
         // will require some sort of recursive implementation
@@ -330,7 +330,7 @@ namespace RUtil
 
                             // Scale number of counts according to variation of pt & observable prior
                             double scale_factor = std::pow(x[1], prior_variation_parameter) *
-                                (*prior_scale_f)(x[3], content, prior_variation_parameter, label);
+                                (*prior_scale_f)(x[3], content, prior_variation_parameter,label);
 
                             content *= scale_factor;
                             error *= scale_factor;

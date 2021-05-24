@@ -425,9 +425,6 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     label = '_original_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
-    if grooming_setting:
-      print('IMPLEMENT THIS')
-      exit()
     label += '_pT_%i_%i_Scaled' % ( (int)(min_pt_truth) , (int)(max_pt_truth) )
 
     g_scet_c = F_scet.Get('g'+label)
@@ -445,9 +442,6 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     label = '_folded_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
-    if grooming_setting:
-      print('IMPLEMENT THIS')
-      exit()
     label += '_%i_pT_%i_%i_Scaled' % ( idx , (int)(min_pt_truth) , (int)(max_pt_truth) )
 
     g_scet_c = F_scet.Get('g'+label)

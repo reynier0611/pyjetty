@@ -126,7 +126,8 @@ namespace RUtil
                                const float max_truth=0.,
                                const double & prior_variation_parameter=0.,
                                const bool move_underflow=false,
-                               const bool use_miss_fake=false);
+                               const bool use_miss_fake=false,
+                               const std::string & label="");
 
         // Set scaling of prior
         prior_scale_func prior_scale_factor_obs(const int & option);

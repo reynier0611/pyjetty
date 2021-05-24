@@ -263,7 +263,8 @@ class RunAnalysis(common_base.CommonBase):
         
     # Write hepdata submission
     if self.do_plot_final_result:
-        self.write_hepdata()
+      print('GOTTA FIX THIS!')
+    #    self.write_hepdata()
 
     # Plot additional performance plots
     if self.do_plot_performance:
@@ -1239,6 +1240,7 @@ class RunAnalysis(common_base.CommonBase):
         h_sys = hepdata_reader_systematics.read_hist_1d(h_sys.GetName())
         sys = hepdata_lib.Uncertainty('sys,{}'.format(sys_label), is_symmetric=True)
         sys.values = ['{}{}'.format(y,'%') for y in h_sys['y']]
+
         y.add_uncertainty(sys)
  
     # Add table to the submission

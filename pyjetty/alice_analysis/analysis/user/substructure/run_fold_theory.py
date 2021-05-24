@@ -54,7 +54,7 @@ class TheoryFolding():
 
     if 'theory_dir' in config:
       self.jetR_list = config['jetR']
-      self.observable = config['analysis_observable']
+      self.observable = config['th_fold_observable']
       self.obs_config_dict = config[self.observable]
 
       # If the user specifies certain subconfigurations to fold via the th_subconfigs parameter,
@@ -100,7 +100,8 @@ class TheoryFolding():
       if 'use_tagging_fraction' in config:
         self.use_tagging_fraction = config['use_tagging_fraction']
 
-      self.output_dir = config['output_dir']
+      #self.output_dir = config['output_dir']
+      self.output_dir = config['theory_dir']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response') 
     else:
       print('Missing several parameters in the config file!')
@@ -113,20 +114,20 @@ class TheoryFolding():
       # Creating a root file to store results
       outfilename = os.path.join( self.theory_dir , 'folded_scet_calculations.root' )
       self.outfile = ROOT.TFile(outfilename,'recreate')
-      # ------------
+      print('===========================================================')
       print('Loading pT scale factors...')
       self.load_pt_scale_factors(self.theory_pt_scale_factors_filepath)
-      # ------------
+      print('===========================================================')
       print('Loading response matrix for folding theory predictions...')
       self.load_theory_response()
-      # ------------
+      print('===========================================================')
       print('Loading theory curves...')
       self.load_theory_curves()
-      # ------------
+      print('===========================================================')
       print("Folding theory histograms...")
       self.fold_theory()
-      # ------------
-      print("Undoing some scalings...")
+      print('===========================================================')
+      print("Applying some final scalings...")
       self.final_processing(self.do_mpi_scaling)
       # ------------
       # Closing the root file with all results from this code
@@ -203,6 +204,8 @@ class TheoryFolding():
             exit()
           setattr(self, '%s_%i' % (name_RM, ri), thn)
 
+          print('Loading RM:',name_RM)
+
           # Create Roounfold object
           name_roounfold_obj = '%s_Roounfold_%i' % (name_RM, ri)
           name_roounfold_thn = '%s_Rebinned_%i'  % (name_RM, ri)
@@ -229,7 +232,7 @@ class TheoryFolding():
           det_obs_bin_array = array('d', self.theory_obs_bins)
           tru_obs_bin_array = det_obs_bin_array
 
-          if grooming_setting:
+          if grooming_setting and self.use_tagging_fraction:
             # Add bin for underflow value (tagging fraction)
             det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
             tru_obs_bin_array = det_obs_bin_array
@@ -279,7 +282,7 @@ class TheoryFolding():
 
        obs_setting = self.obs_settings[i]
        grooming_setting = self.grooming_settings[i]
-       label = self.create_label( jetR , obs_setting , grooming_setting )
+       label = self.create_label( jetR , obs_setting , grooming_setting ) 
 
        # Retrieve theory histograms to be folded
        th_hists = []
@@ -386,6 +389,11 @@ class TheoryFolding():
              h1_folded_hist.Write()
              setattr(self,projection_name,h1_folded_hist) 
 
+         new_obs_lab = obs_setting
+         if grooming_setting:
+           new_obs_lab += '_'
+           new_obs_lab += self.utils.grooming_label(grooming_setting)
+
          # Do the loop backwards and find min and max histograms
          for n_pt in range(0,len(self.final_pt_bins)-1):
            histo_list = []
@@ -398,14 +406,14 @@ class TheoryFolding():
            name_central = 'h1_folded_%s_R%s_%s_%i_sv0_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
            h_central = getattr(self,name_central)
            graph = self.histo_to_graph(h_central,hist_min,hist_max)           
-           name_graph = 'g_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           name_graph = 'g_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
            graph.SetName(name_graph)
 
            graph_min = ROOT.TGraph(hist_min)
-           graph_min.SetName('g_min_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+           graph_min.SetName('g_min_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
            graph_max = ROOT.TGraph(hist_max)
-           graph_max.SetName('g_max_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+           graph_max.SetName('g_max_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
            self.outfile.cd()
            hist_min.Write()
