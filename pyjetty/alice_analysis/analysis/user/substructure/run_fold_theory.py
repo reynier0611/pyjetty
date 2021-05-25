@@ -71,12 +71,7 @@ class TheoryFolding():
 
       # this corresponds to a label in the RM name which indicates whether we are going from parton to charged-hadron level, or
       # from hadron to charged-hadron level, ...
-      self.folding_type = config['folding_type']
-
-      # Scale histograms to account for MPI effects? Default to yes
-      self.do_mpi_scaling = True
-      if 'do_mpi_scaling' in config:
-        self.do_mpi_scaling = config['do_mpi_scaling']
+      self.folding_type = config['folding_type'] 
 
       self.theory_dir = config['theory_dir']
 
@@ -84,6 +79,11 @@ class TheoryFolding():
       self.theory_obs_bins = None
       if 'theory_obs_bins' in config:
         self.theory_obs_bins = config['theory_obs_bins'] # Binning desired for observable
+      else:
+        print('***********************************************************************************************')
+        print('WARNING: No observable binning was specified, so will take whichever binning the RM comes with.')
+        print('         To change this, please, add a parameter theory_obs_bins to the config file')
+        print('***********************************************************************************************')
 
       self.theory_pt_bins  = config['theory_pt_bins' ] # pT binning of theory calculations
       self.final_pt_bins   = config['final_pt_bins'  ] # pT binning wanted for the final curves
@@ -128,7 +128,7 @@ class TheoryFolding():
       self.fold_theory()
       print('===========================================================')
       print("Applying some final scalings...")
-      self.final_processing(self.do_mpi_scaling)
+      self.final_processing()
       # ------------
       # Closing the root file with all results from this code
       self.outfile.Close()
@@ -202,7 +202,7 @@ class TheoryFolding():
           if thn == None:
             print('Could not find RM:',name_RM,'in',self.theory_response_fname[ri])
             exit()
-          setattr(self, '%s_%i' % (name_RM, ri), thn)
+          #setattr(self, '%s_%i' % (name_RM, ri), thn)
 
           print('Loading RM:',name_RM)
 
@@ -224,8 +224,6 @@ class TheoryFolding():
           if self.theory_obs_bins == None:
             binning = self.return_histo_binning_1D( thn.Projection(3) )
             self.theory_obs_bins = [l for l in binning if l >= 0]
-            print('WARNING: No observable binning was specified, so will take whichever binning the RM comes with.')
-            print('         To change this, please, add a parameter theory_obs_bins to the config file')
 
           det_pt_bin_array = array('d', self.theory_pt_bins)
           tru_pt_bin_array = det_pt_bin_array
@@ -288,7 +286,7 @@ class TheoryFolding():
        th_hists = []
 
        for sv in range(0,self.theory_scale_vars[jetR][i]):
-         hist_name = 'h2_th_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
+         hist_name = 'h2_input_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
          if grooming_setting:
            hist_name += '_'
            hist_name += self.utils.grooming_label(grooming_setting)
@@ -312,7 +310,7 @@ class TheoryFolding():
   #----------------------------------------------------------------------
   # Undoing some scalings that had been introduced before
   #----------------------------------------------------------------------
-  def final_processing(self,do_MPI_corr=True):
+  def final_processing(self):
 
     # Loop over jet R
     for jetR in self.jetR_list:
@@ -330,28 +328,27 @@ class TheoryFolding():
        # loop over response files (e.g. Pythia, Herwig, ...)
        for ri, response in enumerate(self.theory_response_files):
          
-          # ----------------------------------------------------------------------------------------
-         # Preparing MPI correction
-         if do_MPI_corr:
-           # Grab the two histograms that will be used for the MPI correction
-           name_mpi_off = 'h_'+self.observable+'_JetPt_ch_'+label
-           name_mpi_on = 'h_'+self.observable+'_JetPt_ch_MPIon_'+label
+         # ----------------------------------------------------------------------------------------
+         # Preparing MPI correction 
+         # Grab the two histograms that will be used for the MPI correction
+         name_mpi_off = 'h_'+self.observable+'_JetPt_ch_'+label
+         name_mpi_on = 'h_'+self.observable+'_JetPt_ch_MPIon_'+label
 
-           h2_mpi_off = response.Get(name_mpi_off)
-           h2_mpi_on = response.Get(name_mpi_on)
+         h2_mpi_off = response.Get(name_mpi_off)
+         h2_mpi_on = response.Get(name_mpi_on)
 
-           # Gotta make sure the histograms we will use for the correction have the proper binning
-           y_bins = array('d', self.theory_obs_bins)
-           if grooming_setting:
-             y_bins = np.insert(y_bins, 0, -0.001)
-           h2_mpi_off = self.histutils.rebin_th2(h2_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
-           h2_mpi_on  = self.histutils.rebin_th2(h2_mpi_on , name_mpi_on +'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
+         # Gotta make sure the histograms we will use for the correction have the proper binning
+         y_bins = array('d', self.theory_obs_bins)
+         if grooming_setting:
+           y_bins = np.insert(y_bins, 0, -0.001)
+         h2_mpi_off = self.histutils.rebin_th2(h2_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
+         h2_mpi_on  = self.histutils.rebin_th2(h2_mpi_on , name_mpi_on +'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
 
-           h2_mpi_ratio = h2_mpi_on.Clone()
-           title = 'h_mpi_on_over_off_'+self.observable+'_JetPt_ch_'+label
-           h2_mpi_ratio.SetNameTitle(title,title)
-           h2_mpi_ratio.Divide(h2_mpi_off)
-           h2_mpi_ratio.SetDirectory(0)
+         h2_mpi_ratio = h2_mpi_on.Clone()
+         title = 'h_mpi_on_over_off_'+self.observable+'_JetPt_ch_'+label
+         h2_mpi_ratio.SetNameTitle(title,title)
+         h2_mpi_ratio.Divide(h2_mpi_off)
+         h2_mpi_ratio.SetDirectory(0)
 
          # ----------------------------------------------------------------------------------------
          # Loop over scale variations
@@ -360,21 +357,25 @@ class TheoryFolding():
            folded_hist_name = 'h2_folded_%s_R%s_obs_pT_%s_%i_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , ri, sv )
            h2_folded_hist = getattr(self,folded_hist_name)
 
-           if do_MPI_corr:
-             h2_folded_hist.Multiply(h2_mpi_ratio) 
+           # Copy that won't have MPT corrections
+           h2_folded_hist_noMPI = h2_folded_hist.Clone()
+           noMPI_hist_name = 'h2_folded_noMPIcorr_%s_R%s_obs_pT_%s_%i_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , ri, sv )
+           h2_folded_hist_noMPI.SetNameTitle(noMPI_hist_name,noMPI_hist_name)
+
+           h2_folded_hist.Multiply(h2_mpi_ratio) 
 
            self.outfile.cd()
            h2_folded_hist.Write()
+           h2_folded_hist_noMPI.Write()
 
            # If desired binning is different from what was used for the folding, need to take that into account before changing the pT normalization
            for n_pt in range(0,len(self.final_pt_bins)-1):
-             projection_name = 'h1_folded_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) 
+             # Get the bins that correspond to the pT edges given
+             min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
 
-             min_bin, max_bin = self.bin_position( self.theory_pt_bins , self.final_pt_bins[n_pt],self.final_pt_bins[n_pt+1] )
-            
+             projection_name = 'h1_folded_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))            
              h1_folded_hist = h2_folded_hist.ProjectionY(projection_name,min_bin,max_bin)
              h1_folded_hist.SetTitle(projection_name)
-
              h1_folded_hist.SetDirectory(0)
 
              # Undo the bin width scaling and set correct normalization
@@ -385,9 +386,22 @@ class TheoryFolding():
              for b in range(0,h1_folded_hist.GetNbinsX()):
                h1_folded_hist.SetBinError(b+1,0)
 
-             self.outfile.cd()
-             h1_folded_hist.Write()
-             setattr(self,projection_name,h1_folded_hist) 
+             # Now doing the same, for the histograms with no MPI corrections
+             projection_name_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             h1_folded_hist_noMPI = h2_folded_hist_noMPI.ProjectionY(projection_name_noMPI,min_bin,max_bin)
+             h1_folded_hist_noMPI.SetTitle(projection_name_noMPI)
+             h1_folded_hist_noMPI.SetDirectory(0)
+
+              # Undo the bin width scaling and set correct normalization
+             norm_factor_noMPI = h1_folded_hist_noMPI.Integral()
+             if norm_factor_noMPI == 0: norm_factor_noMPI = 1
+             h1_folded_hist_noMPI.Scale(1./norm_factor_noMPI, "width")
+
+             for b in range(0,h1_folded_hist_noMPI.GetNbinsX()):
+               h1_folded_hist_noMPI.SetBinError(b+1,0)
+
+             setattr(self,projection_name      ,h1_folded_hist      ) 
+             setattr(self,projection_name_noMPI,h1_folded_hist_noMPI)
 
          new_obs_lab = obs_setting
          if grooming_setting:
@@ -397,10 +411,16 @@ class TheoryFolding():
          # Do the loop backwards and find min and max histograms
          for n_pt in range(0,len(self.final_pt_bins)-1):
            histo_list = []
+           histo_list_noMPI = []
            for sv in range(0,self.theory_scale_vars[jetR][i]):
              projection_name = 'h1_folded_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
              histo_list.append(getattr(self,projection_name))
+
+             projection_name_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%i_sv%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             histo_list_noMPI.append(getattr(self,projection_name_noMPI))
+
            hist_min, hist_max = self.min_max( histo_list )
+           hist_min_noMPI, hist_max_noMPI  = self.min_max( histo_list_noMPI )
 
            # Create a graph out of these histograms
            name_central = 'h1_folded_%s_R%s_%s_%i_sv0_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
@@ -415,7 +435,28 @@ class TheoryFolding():
            graph_max = ROOT.TGraph(hist_max)
            graph_max.SetName('g_max_folded_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
+           # Now doing the same, for the histograms with no MPI corrections
+           name_central_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%i_sv0_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           h_central_noMPI = getattr(self,name_central_noMPI)
+           graph_noMPI = self.histo_to_graph(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
+           name_graph_noMPI = 'g_folded_noMPIcorr_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           graph_noMPI.SetName(name_graph_noMPI)
+
+           graph_min_noMPI = ROOT.TGraph(hist_min_noMPI)
+           graph_min_noMPI.SetName('g_min_folded_noMPIcorr_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+
+           graph_max_noMPI = ROOT.TGraph(hist_max_noMPI)
+           graph_max_noMPI.SetName('g_max_folded_noMPIcorr_%s_R%s_%s_%i_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,ri,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+
+           # Saving results to root file
            self.outfile.cd()
+
+           hist_min_noMPI.Write()
+           hist_max_noMPI.Write()
+           graph_noMPI.Write()
+           graph_min_noMPI.Write()
+           graph_max_noMPI.Write()
+
            hist_min.Write()
            hist_max.Write()
            graph.Write()
@@ -571,10 +612,10 @@ class TheoryFolding():
     nBins = histo_list[0].GetNbinsX()
     
     hist_min = histo_list[0].Clone()
-    hist_min.SetName(hist_min.GetName()+'_min')
+    hist_min.SetName(hist_min.GetName().replace('_sv0','')+'_min')
 
     hist_max = histo_list[0].Clone()
-    hist_max.SetName(hist_max.GetName()+'_max')
+    hist_max.SetName(hist_max.GetName().replace('_sv0','')+'_max')
     
     for b in range(0,nBins):
         bin_content = []
