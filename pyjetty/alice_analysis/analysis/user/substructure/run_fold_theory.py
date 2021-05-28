@@ -288,11 +288,12 @@ class TheoryFolding():
        th_hists = []
 
        for sv in range(0,self.theory_scale_vars[jetR][i]):
-         hist_name = 'h2_input_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
+         hist_name = 'h2_input_%s_R%s_obs_pT_%s' % ( self.observable , (str)(jetR).replace('.','') , obs_setting )
          if grooming_setting:
            hist_name += '_'
            hist_name += self.utils.grooming_label(grooming_setting)
-         
+         hist_name += '_sv%i' % (sv)
+ 
          th_hist = getattr(self,hist_name)
          th_hists.append(th_hist) 
 
@@ -345,7 +346,7 @@ class TheoryFolding():
          else:
           y_bins = array('d',getattr(self,'binning_'+obs_setting))
  
-         if grooming_setting:
+         if grooming_setting and self.use_tagging_fraction:
            y_bins = np.insert(y_bins, 0, -0.001)
          h2_mpi_off = self.histutils.rebin_th2(h2_mpi_off, name_mpi_off+'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
          h2_mpi_on  = self.histutils.rebin_th2(h2_mpi_on , name_mpi_on +'_Rebinned_%i' % ri, pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )

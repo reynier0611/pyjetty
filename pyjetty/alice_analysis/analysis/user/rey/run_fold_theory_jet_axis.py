@@ -91,10 +91,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         # Loop over all scale variations
         for sv in range(0,n_scale_variations):
-          hist_name = 'h2_input_%s_R%s_obs_pT_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , sv )
+          hist_name = 'h2_input_%s_R%s_obs_pT_%s' % ( self.observable , (str)(jetR).replace('.','') , obs_setting )
           if grooming_setting:
             hist_name += '_'
             hist_name += self.utils.grooming_label(grooming_setting)
+          hist_name += '_sv%i' % (sv)
 
           hist_name_no_scaling = hist_name + '_no_scaling'
 
