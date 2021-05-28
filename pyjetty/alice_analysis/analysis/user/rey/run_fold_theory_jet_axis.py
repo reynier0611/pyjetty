@@ -71,7 +71,11 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
 
         pt_bins = array('d', self.theory_pt_bins)
         obs_points = array('d', th_obs )               # points provided in the theory calculation
-        obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
+
+        if self.theory_obs_bins:
+          obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
+        else:
+          obs_bins = array('d',getattr(self,'binning_'+obs_setting))
 
         # Add bin for underflow value (tagging fraction)
         if grooming_setting and self.use_tagging_fraction:
@@ -176,28 +180,36 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
               h1_input_hist.SetBinError(b+1,0)
 
             histo_list.append(h1_input_hist)
+
+          # Create envelope histograms
           hist_min, hist_max = self.min_max( histo_list )
 
-          # Create a graph out of these histograms
-          name_central = 'h1_input_%s_R%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          # Rename some objects
+          name_h_cent = 'h1_input_%s_R%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          name_h_min  = 'h1_min_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+          name_h_max  = 'h1_max_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+
           h_central = histo_list[0]
-          graph = self.histo_to_graph(h_central,hist_min,hist_max)
-          name_graph = 'g_input_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-          graph.SetName(name_graph)
+          h_central.SetName(name_h_cent)
+          hist_min .SetName(name_h_min )
+          hist_max .SetName(name_h_max )
 
-          graph_min = ROOT.TGraph(hist_min)
-          graph_min.SetName('g_min_input_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          # Create a graph out of these histograms
+          graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
+          graph_min  = ROOT.TGraph(hist_min)
+          graph_max  = ROOT.TGraph(hist_max)
 
-          graph_max = ROOT.TGraph(hist_max)
-          graph_max.SetName('g_max_input_%s_R%s_%s_pT_%i_%i_Scaled' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_cent.SetName('g_input_%s_R%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_min .SetName('g_min_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_max .SetName('g_max_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
           self.outfile.cd()
-          h_central.Write()
-          hist_min.Write()
-          hist_max.Write()
-          graph.Write()
-          graph_min.Write()
-          graph_max.Write()
+          h_central .Write()
+          hist_min  .Write()
+          hist_max  .Write()
+          graph_cent.Write()
+          graph_min .Write()
+          graph_max .Write()
 
         # -----------------------------------------------------
         # Setting the filled histograms as attributes
