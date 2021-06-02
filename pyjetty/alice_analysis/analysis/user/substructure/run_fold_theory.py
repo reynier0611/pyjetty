@@ -357,6 +357,11 @@ class TheoryFolding():
          h2_mpi_ratio.Divide(h2_mpi_off)
          h2_mpi_ratio.SetDirectory(0)
 
+         self.outfile.cd()
+         h2_mpi_on.Write()
+         h2_mpi_off.Write()
+         h2_mpi_ratio.Write()
+
          # ----------------------------------------------------------------------------------------
          # Loop over scale variations
          for sv in range(0,self.theory_scale_vars[jetR][i]):
@@ -364,7 +369,7 @@ class TheoryFolding():
            folded_hist_name = 'h2_folded_%s_R%s_obs_pT_%s_%i_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , ri, sv )
            h2_folded_hist = getattr(self,folded_hist_name)
 
-           # Copy that won't have MPT corrections
+           # Copy that won't have MPI corrections
            h2_folded_hist_noMPI = h2_folded_hist.Clone()
            noMPI_hist_name = 'h2_folded_noMPIcorr_%s_R%s_obs_pT_%s_%i_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , ri, sv )
            h2_folded_hist_noMPI.SetNameTitle(noMPI_hist_name,noMPI_hist_name)
