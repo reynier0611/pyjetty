@@ -299,7 +299,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)
     myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(3*h.GetMaximum()) 
+    myBlankHisto.SetMaximum(2.5*h.GetMaximum()) 
     myBlankHisto.SetMinimum(0.)
     myBlankHisto.Draw("E")
 
@@ -332,14 +332,22 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
       # Folded theory curves
       lg_scet_folded_c = []
+      lg_scet_folded_noMPI_c = []
       for g, gen in enumerate(self.response_labels):
-        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, g)
+        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
+        g_scet_folded_noMPI_c, g_scet_folded_noMPI_min, g_scet_folded_noMPI_max = self.scet_folded_prediction_noMPIcorr(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
 
         g_scet_folded_c.SetMarkerColor(clr_arr[g])
         g_scet_folded_c.SetLineColor(clr_arr[g])
         g_scet_folded_c.SetFillColorAlpha(clr_arr[g],0.2)
         g_scet_folded_c.Draw('sameLE3')
         lg_scet_folded_c.append(g_scet_folded_c)
+
+        g_scet_folded_noMPI_c.SetMarkerColor(clr_arr[g+1])
+        g_scet_folded_noMPI_c.SetLineColor(clr_arr[g+1])
+        g_scet_folded_noMPI_c.SetFillColorAlpha(clr_arr[g+1],0.2)
+        g_scet_folded_noMPI_c.Draw('sameLE3')
+        lg_scet_folded_noMPI_c.append(g_scet_folded_noMPI_c)
 
     # ------------------------------------------------------------------------------------------------
     
@@ -392,6 +400,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     if plot_scet:
       myLegend.AddEntry(g_scet_orig_c,'SCET full-hadron')
       for g, gen in enumerate(self.response_labels):
+        myLegend.AddEntry(lg_scet_folded_noMPI_c[g],'SCET charged, no MPI')
         myLegend.AddEntry(lg_scet_folded_c[g],'SCET charged ('+gen+')')
     myLegend.Draw()
 
@@ -423,9 +432,9 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     F_scet = ROOT.TFile(scetFilename)
 
-    label = '_original_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label = '_input_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
-    label += '_pT_%i_%i_Scaled' % ( (int)(min_pt_truth) , (int)(max_pt_truth) )
+    label += '_pT_%i_%i' % ( (int)(min_pt_truth) , (int)(max_pt_truth) )
 
     g_scet_c = F_scet.Get('g'+label)
     g_scet_min = F_scet.Get('g_min'+label)
@@ -434,7 +443,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     return g_scet_c, g_scet_min, g_scet_max
 
   #----------------------------------------------------------------------
-  def scet_folded_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, idx):
+  def scet_folded_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, model):
     scet_file = 'folded_scet_calculations.root'
     scetFilename = os.path.join(self.theory_dir, scet_file)
 
@@ -442,7 +451,24 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     label = '_folded_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
-    label += '_%i_pT_%i_%i_Scaled' % ( idx , (int)(min_pt_truth) , (int)(max_pt_truth) )
+    label += '_%s_pT_%i_%i' % ( model , (int)(min_pt_truth) , (int)(max_pt_truth) )
+
+    g_scet_c = F_scet.Get('g'+label)
+    g_scet_min = F_scet.Get('g_min'+label)
+    g_scet_max = F_scet.Get('g_max'+label)
+
+    return g_scet_c, g_scet_min, g_scet_max
+
+  #----------------------------------------------------------------------
+  def scet_folded_prediction_noMPIcorr(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, model):
+    scet_file = 'folded_scet_calculations.root'
+    scetFilename = os.path.join(self.theory_dir, scet_file)
+
+    F_scet = ROOT.TFile(scetFilename)
+
+    label = '_folded_noMPIcorr_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label += obs_label
+    label += '_%s_pT_%i_%i' % ( model , (int)(min_pt_truth) , (int)(max_pt_truth) )
 
     g_scet_c = F_scet.Get('g'+label)
     g_scet_min = F_scet.Get('g_min'+label)
