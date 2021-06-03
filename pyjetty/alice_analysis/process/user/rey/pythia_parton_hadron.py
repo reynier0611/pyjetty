@@ -212,13 +212,13 @@ class pythia_parton_hadron(process_base.ProcessBase):
               # ----- charged hadron-level histograms --------------------------
               if self.level in [None, 'ch']:
                 name = common_name_1 + 'JetPt_ch' + common_name_2
-                h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}', 195, 5, 200, 160, 0, max_obs)
+                h = ROOT.TH2F(name, name + ';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}', 195, 5, 200, 90, 0, max_obs)
                 setattr(self, name, h)
                 getattr(self, hist_list_name).append(h)
              
                 # histograms for MPI on, ISR on 
                 name = common_name_1 + 'JetPt_ch_MPIon' + common_name_2
-                h = ROOT.TH2F(name, name+';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}', 195, 5, 200,160, 0, max_obs)
+                h = ROOT.TH2F(name, name+';p_{T}^{ch jet} [GeV/#it{c}];'+obs_label+'^{ch}', 195, 5, 200,90, 0, max_obs)
                 setattr(self, name, h)
                 getattr(self, hist_list_name_MPIon).append(h)
 
