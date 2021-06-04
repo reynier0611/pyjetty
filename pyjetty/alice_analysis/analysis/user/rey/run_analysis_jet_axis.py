@@ -232,7 +232,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       if self.do_theory_comp:
         for itm in self.th_subconfigs:
          if obs_setting == self.obs_config_dict[itm]['axis']: 
-           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=True)
+           self.plot_observable(jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=True, maxb=maxbin)
            continue
       # --------------------------------------------------------------
 
@@ -253,7 +253,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       fFinalResults.Close()
       
   #----------------------------------------------------------------------
-  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=False):
+  def plot_observable(self, jetR, obs_label, obs_setting, grooming_setting, min_pt_truth, max_pt_truth, plot_pythia=False, plot_scet=False, maxb=None):
     
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
@@ -291,10 +291,14 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     h_sys.SetFillColorAlpha(color, 0.3)
     h_sys.SetFillStyle(1001)
     h_sys.SetLineWidth(0)
-    
-    n_obs_bins_truth = self.n_bins_truth(obs_label)
+     
     truth_bin_array = self.truth_bin_array(obs_label)
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram', n_obs_bins_truth, truth_bin_array)
+    xmin = truth_bin_array[0]
+    xmax = truth_bin_array[-1]
+    if maxb:
+      xmax = truth_bin_array[maxb]
+
+    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',1,xmin,xmax)
     myBlankHisto.SetNdivisions(108)
     myBlankHisto.SetXTitle(xtitle)
     myBlankHisto.GetYaxis().SetTitleOffset(1.5)

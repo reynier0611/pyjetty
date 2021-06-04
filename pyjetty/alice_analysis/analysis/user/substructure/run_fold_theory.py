@@ -21,6 +21,7 @@ ROOT.gSystem.Load('libpyjetty_rutil')
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
+ROOT.gErrorIgnoreLevel = 2000
 
 ################################################################
 ################################################################
@@ -39,7 +40,7 @@ class TheoryFolding():
     # Initialize yaml config
     self.initialize_user_config()
 
-    #print(self)
+    ROOT.gStyle.SetOptStat(0)
   
   #---------------------------------------------------------------
   # Initialize config file into class members
@@ -64,10 +65,9 @@ class TheoryFolding():
       else:
         self.obs_subconfig_list = [name for name in list(self.obs_config_dict.keys()) if 'config' in name ]
 
-      self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list)
-      #self.grooming_settings = self.utils.grooming_settings(self.obs_config_dict) # This only works if all  
+      self.obs_settings = self.utils.obs_settings(self.observable, self.obs_config_dict, self.obs_subconfig_list) 
       self.grooming_settings = [ self.get_grooming_setting(self.obs_config_dict[cf]) for cf in self.obs_subconfig_list]
-      self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i]) for i in range(len(self.obs_subconfig_list))]
+      #self.obs_labels = [self.utils.obs_label(self.obs_settings[i], self.grooming_settings[i]) for i in range(len(self.obs_subconfig_list))]
 
       # this corresponds to a label in the RM name which indicates whether we are going from parton to charged-hadron level, or
       # from hadron to charged-hadron level, ...
@@ -103,9 +103,26 @@ class TheoryFolding():
       #self.output_dir = config['output_dir']
       self.output_dir = config['theory_dir']
       self.output_dir_theory = os.path.join(self.output_dir, self.observable, 'theory_response') 
+
+      self.set_observable_label()
     else:
       print('Missing several parameters in the config file!')
       exit()
+
+  #---------------------------------------------------------------
+  # Set Observable Label
+  def set_observable_label(self):
+    obs = ''
+    if self.observable == 'jet_axis':
+      obs = '#it{#DeltaR}_{axis}'
+    elif self.observable == 'ang':
+      obs = '#it{#lambda}_{#it{#beta}}^{#it{#kappa}=1}'
+    else:
+      obs = 'observable'
+    
+    self.obs_label = obs
+
+  #---------------------------------------------------------------
 
   #---------------------------------------------------------------
   # Main processing function
@@ -132,6 +149,9 @@ class TheoryFolding():
       # ------------
       # Closing the root file with all results from this code
       self.outfile.Close()
+      print('***********************************************************************************************\nDone!')
+      print('output produced by this code can be found in:',self.output_dir)
+      print('***********************************************************************************************')
 
   #---------------------------------------------------------------
   # Loads pT scale factors from q/g fraction theory predictions
@@ -252,9 +272,12 @@ class TheoryFolding():
 
           setattr(self, name_roounfold_obj, roounfold_response)
 
-          # Save the response matrix to the root file, in case we want to check something later
-          self.outfile.cd()
-          roounfold_thn.Write()
+          # Save the response matrix to pdf file
+          outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
+          if not os.path.exists(outpdfname):
+            os.makedirs(outpdfname)
+          outpdfname = os.path.join(outpdfname, 'RM_slices_%s.pdf'%(label) )
+          self.plot_RM_slice_histograms( roounfold_thn, outpdfname)
 
   #----------------------------------------------------------------------
   # Extract binning from a 1D histogram
@@ -348,19 +371,23 @@ class TheoryFolding():
  
          if grooming_setting and self.use_tagging_fraction:
            y_bins = np.insert(y_bins, 0, -0.001)
+
+         xtit_MPIoff = h2_mpi_off.GetXaxis().GetTitle()
+         ytit_MPIoff = h2_mpi_off.GetYaxis().GetTitle()
+         
          h2_mpi_off = self.histutils.rebin_th2(h2_mpi_off, name_mpi_off+'_Rebinned_%s' % self.theory_response_labels[ri], pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
          h2_mpi_on  = self.histutils.rebin_th2(h2_mpi_on , name_mpi_on +'_Rebinned_%s' % self.theory_response_labels[ri], pt_bins, len(pt_bins)-1, y_bins, len(y_bins)-1, grooming_setting!=None )
+         
+         h2_mpi_off.GetXaxis().SetTitle(xtit_MPIoff)
+         h2_mpi_off.GetYaxis().SetTitle(ytit_MPIoff)
+         h2_mpi_on .GetXaxis().SetTitle(xtit_MPIoff) # The titles should be the same in both histograms
+         h2_mpi_on .GetYaxis().SetTitle(ytit_MPIoff) # The titles should be the same in both histograms
 
          h2_mpi_ratio = h2_mpi_on.Clone()
          title = 'h_mpi_on_over_off_'+self.observable+'_JetPt_ch_'+label
          h2_mpi_ratio.SetNameTitle(title,title)
          h2_mpi_ratio.Divide(h2_mpi_off)
          h2_mpi_ratio.SetDirectory(0)
-
-         self.outfile.cd()
-         h2_mpi_on.Write()
-         h2_mpi_off.Write()
-         h2_mpi_ratio.Write()
 
          # ----------------------------------------------------------------------------------------
          # Loop over scale variations
@@ -464,6 +491,28 @@ class TheoryFolding():
            graph_min_noMPI .SetName('g_min_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            graph_max_noMPI .SetName('g_max_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
+           xtit = self.obs_label
+           ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
+           tit_noMPI = 'output (charged-level, no MPI) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+           tit = 'output (charged-level, MPI) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+         
+           self.pretty_1D_object(graph_cent_noMPI, 8,2,1,tit_noMPI, xtit, ytit, True)
+           self.pretty_1D_object(graph_min_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
+           self.pretty_1D_object(graph_max_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
+    
+           self.pretty_1D_object(graph_cent      ,62,2,1,tit      , xtit, ytit, True)
+           self.pretty_1D_object(graph_min       , 1,1,2,tit      , xtit, ytit)
+           self.pretty_1D_object(graph_max       , 1,1,2,tit      , xtit, ytit)
+
+           outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
+           if not os.path.exists(outpdfname):
+             os.makedirs(outpdfname)
+           outpdfname_noMPI = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output_noMPI.pdf'%(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+           outpdfname       = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output.pdf'      %(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+
+           self.plot_processed_functions( graph_cent_noMPI, graph_min_noMPI, graph_max_noMPI, outpdfname_noMPI )
+           self.plot_processed_functions( graph_cent      , graph_min      , graph_max      , outpdfname       )
+
            # Saving results to root file
            self.outfile.cd()
 
@@ -480,6 +529,14 @@ class TheoryFolding():
            graph_cent.Write()
            graph_min .Write()
            graph_max .Write()
+
+         #---------------------------
+         # Create some pdf with plots
+         outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
+         if not os.path.exists(outpdfname):
+           os.makedirs(outpdfname)
+         outpdfname = os.path.join(outpdfname, 'mpi_corr_%s.pdf'%(label) )
+         self.plot_MPI_correction_histograms( h2_mpi_on, h2_mpi_off, h2_mpi_ratio, outpdfname)
 
   #---------------------------------------------------------------
   # Given a pair of bin-edge values, return their index
@@ -700,6 +757,172 @@ class TheoryFolding():
       return {'sd':[zcut,beta]}
     else:
       return None
+
+  #----------------------------------------------------------------------
+  # Plot processed functions
+  #----------------------------------------------------------------------
+  def plot_processed_functions( self, graphs, graph_min, graph_max, outpdfname): 
+    c1 = ROOT.TCanvas('c1','c1',900,600)
+    c1.SetLeftMargin(0.22)
+    c1.SetRightMargin(0.03)
+    c1.SetBottomMargin(0.15)
+    graphs.Draw('ALE3')
+    graph_min.Draw('sameL')
+    graph_max.Draw('sameL')
+    c1.Draw()
+    c1.Print(outpdfname)
+    del c1
+
+  #----------------------------------------------------------------------
+  # Plot the MPI-correction histograms
+  #----------------------------------------------------------------------
+  def plot_MPI_correction_histograms( self, h2MPIon, h2MPIoff, h2MPIcorr, outpdfname):
+    c1 = ROOT.TCanvas('c1','c1',1000,300)
+    c1.Divide(3,1)
+
+    h2MPIon  .GetXaxis().SetRangeUser(self.final_pt_bins[0],self.final_pt_bins[-1]) # Only plot in the pT range that will be considered ultimately
+    h2MPIoff .GetXaxis().SetRangeUser(self.final_pt_bins[0],self.final_pt_bins[-1])
+    h2MPIcorr.GetXaxis().SetRangeUser(self.final_pt_bins[0],self.final_pt_bins[-1])
+
+    for i in range(0,3):
+      if i < 2:
+        c1.cd(i+1).SetLogz()
+      c1.cd(i+1).SetBottomMargin(0.19)
+      c1.cd(i+1).SetLeftMargin(0.18) 
+      c1.cd(i+1).SetRightMargin(0.15)
+
+    c1.cd(1)
+    self.pretty_TH2D(h2MPIon, 'MPI on')
+    h2MPIon.Draw('COLZ')
+    
+    c1.cd(2)
+    self.pretty_TH2D(h2MPIoff, 'MPI off')
+    h2MPIoff.Draw('COLZ')
+    
+    c1.cd(3)
+    self.pretty_TH2D(h2MPIcorr, '(MPI on)/(MPI off)')
+    h2MPIcorr.SetMaximum(3) # Hopefully most of the correction is small
+    h2MPIcorr.Draw('COLZ')
+    
+    c1.Draw()
+    c1.Print(outpdfname)
+    del c1
+
+  #----------------------------------------------------------------------
+  # Plot the RM slices
+  #----------------------------------------------------------------------
+  def plot_RM_slice_histograms( self, hRM , outpdfname):
+    c1 = ROOT.TCanvas('c1','c1',1000,900)
+    c1.Divide(2,2)
+
+    hRM.GetAxis(0).SetRangeUser(self.final_pt_bins[0],self.final_pt_bins[-1]) # Only plot in the pT range that will be considered ultimately
+    hRM.GetAxis(1).SetRangeUser(self.final_pt_bins[0],self.final_pt_bins[-1]) # Only plot in the pT range that will be considered ultimately
+
+    h2_had_obs_pT  = hRM.Projection(3,1)
+    h2_chr_obs_pT  = hRM.Projection(2,0)
+    h2_obs_chr_had = hRM.Projection(3,2)
+    h2_pT_chr_had  = hRM.Projection(1,0)
+
+    self.pretty_TH2D( h2_had_obs_pT  ,h2_had_obs_pT .GetYaxis().GetTitle()+' vs. '+h2_had_obs_pT .GetXaxis().GetTitle())
+    self.pretty_TH2D( h2_chr_obs_pT  ,h2_chr_obs_pT .GetYaxis().GetTitle()+' vs. '+h2_chr_obs_pT .GetXaxis().GetTitle())
+    self.pretty_TH2D( h2_obs_chr_had ,h2_obs_chr_had.GetYaxis().GetTitle()+' vs. '+h2_obs_chr_had.GetXaxis().GetTitle())
+    self.pretty_TH2D( h2_pT_chr_had  ,h2_pT_chr_had .GetYaxis().GetTitle()+' vs. '+h2_pT_chr_had .GetXaxis().GetTitle())
+
+    h2_had_obs_pT .SetMinimum(1e-7)
+    h2_chr_obs_pT .SetMinimum(1e-7)
+    h2_obs_chr_had.SetMinimum(1e-7)
+    h2_pT_chr_had .SetMinimum(1e-7)
+
+    for i in range(0,4):
+      c1.cd(i+1).SetLogz()
+      if i < 2:
+        c1.cd(i+1).SetTheta(50)
+        c1.cd(i+1).SetPhi(220)
+        c1.cd(i+1).SetLeftMargin(0.12)
+      else:
+        c1.cd(i+1).SetBottomMargin(0.18)
+        c1.cd(i+1).SetLeftMargin(0.17)
+        c1.cd(i+1).SetRightMargin(0.16)
+
+    c1.cd(1)
+    h2_had_obs_pT.GetXaxis().SetTitleOffset(1.5)
+    h2_had_obs_pT.GetYaxis().SetTitleOffset(1.5)
+    h2_had_obs_pT.Draw('LEGO0')
+
+    c1.cd(2)
+    h2_had_obs_pT.GetXaxis().SetTitleOffset(1.6)
+    h2_had_obs_pT.GetYaxis().SetTitleOffset(1.6)
+    h2_chr_obs_pT.Draw('LEGO0')
+
+    c1.cd(3)
+    h2_obs_chr_had.Draw('COLZ')
+
+    c1.cd(4)
+    h2_pT_chr_had.Draw('COLZ')
+
+    c1.Draw()
+    c1.Print(outpdfname)
+    del c1
+
+  #----------------------------------------------------------------------
+  # Edit 2D histogram
+  #----------------------------------------------------------------------
+  def pretty_TH2D(self, h2 ,tit='', xtit='',ytit='',ztit=''):
+    h2.GetXaxis().SetLabelSize(0.06)
+    h2.GetXaxis().SetTitleSize(0.06)
+    h2.GetXaxis().CenterTitle()
+    h2.GetXaxis().SetNdivisions(107)
+    if xtit!='':
+        h2.GetXaxis().SetTitle(xtit)
+    h2.GetXaxis().SetTitleOffset(1.4)
+    
+    h2.GetYaxis().SetLabelSize(0.06)
+    h2.GetYaxis().SetTitleSize(0.06)
+    h2.GetYaxis().CenterTitle()
+    h2.GetYaxis().SetNdivisions(107)
+    if ytit!='':
+        h2.GetYaxis().SetTitle(ytit)
+    h2.GetYaxis().SetTitleOffset(1.4)
+    
+    h2.GetZaxis().SetLabelSize(0.06)
+    h2.GetZaxis().SetTitleSize(0.06)
+    h2.GetZaxis().CenterTitle()
+    h2.GetZaxis().SetNdivisions(106)
+    if ztit!='':
+      h2.GetZaxis().SetTitle(ztit)
+    h2.GetZaxis().SetTitleOffset(1.3) 
+        
+    h2.SetTitle(tit)
+
+  #----------------------------------------------------------------------
+  # Edit 1D histogram and graphs
+  #----------------------------------------------------------------------
+  def pretty_1D_object(self,h1,color=1,lwidth=1,lstyle=1,tit='',xtit='',ytit='',Fill=False):
+    h1.SetLineColor(color)
+    h1.SetMarkerColor(color)
+    if Fill:
+        h1.SetFillColorAlpha(color,0.2)
+    h1.SetLineStyle(lstyle)
+    h1.SetLineWidth(lwidth)
+    
+    h1.GetXaxis().SetLabelSize(0.07)
+    h1.GetXaxis().SetTitleSize(0.07)
+    h1.GetXaxis().CenterTitle()
+    h1.GetXaxis().SetNdivisions(107)
+    if xtit != '':
+        h1.GetXaxis().SetTitle(xtit)
+    h1.GetXaxis().SetTitleOffset(1)
+    
+    h1.GetYaxis().SetLabelSize(0.08)
+    h1.GetYaxis().SetTitleSize(0.08)
+    h1.GetYaxis().CenterTitle()
+    h1.GetYaxis().SetNdivisions(107)
+    if ytit != '':
+        h1.GetYaxis().SetTitle(ytit)
+    h1.GetYaxis().SetTitleOffset(1.2)
+    
+    if tit != '':    
+        h1.SetTitle(tit)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

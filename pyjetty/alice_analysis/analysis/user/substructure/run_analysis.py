@@ -382,7 +382,6 @@ class RunAnalysis(common_base.CommonBase):
             self.observable, jetR, obs_label, grooming_setting)
     with open(self.logfile, 'a') as myfile:
       myfile.write(text + '\n')
-    print(text)
 
     # Select final regularization parameter
     try:
@@ -437,7 +436,6 @@ class RunAnalysis(common_base.CommonBase):
             min_pt_truth, max_pt_truth, self.reg_param_name, reg_param_final)
           with open(self.logfile, 'a') as myfile:
             myfile.write(text + '\n')
-          print(text)
         else:
           print("ERROR: No max_reg_param or reg_param set in config file for", obs_label)
           exit(1)
