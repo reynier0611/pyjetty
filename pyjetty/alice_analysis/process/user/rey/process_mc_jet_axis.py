@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 """
+  AttributeError: 'ProcessMC_jet_axis' object has no attribute 'hResponse_JetPt_jet_axis_R0.4_Standard_WTA_Rmax0.05'
   Analysis class to read a ROOT TTree of MC track information
   and do jet-finding, and save response histograms.
   
@@ -60,12 +61,21 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       else:
         grooming_label = ''
 
-      name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-      h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -1*jetR, jetR)
-      h.GetXaxis().SetTitle('p_{T,truth}')
-      h.GetYaxis().SetTitle('#DeltaR_{truth}')
-      h.GetZaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
-      setattr(self, name, h)
+      if self.is_pp:
+        name = 'hResidual_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
+        h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -1*jetR, jetR)
+        h.GetXaxis().SetTitle('p_{T,truth}')
+        h.GetYaxis().SetTitle('#DeltaR_{truth}')
+        h.GetZaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+        setattr(self, name, h)        
+      else:
+          for R_max in self.max_distance:            
+            name = 'hResidual_JetPt_{}_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
+            h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -1*jetR, jetR)
+            h.GetXaxis().SetTitle('p_{T,truth}')
+            h.GetYaxis().SetTitle('#DeltaR_{truth}')
+            h.GetZaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
+            setattr(self, name, h)
 
       # Create THn of response for jet axis deltaR
       dim = 4;
@@ -87,8 +97,13 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
           max[2] *= 1./4. 
           max[3] *= 1./4.
 
-      name = 'hResponse_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-      self.create_thn(name, title, dim, nbins, min, max)
+      if self.is_pp:
+        name = 'hResponse_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
+        self.create_thn(name, title, dim, nbins, min, max)
+      else:
+        for R_max in self.max_distance:
+          name = 'hResponse_JetPt_{}_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
+          self.create_thn(name, title, dim, nbins, min, max)
 
       name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
       h = ROOT.TH2F(name, name, 30, 0, 300, 100, 0, 1.0)
