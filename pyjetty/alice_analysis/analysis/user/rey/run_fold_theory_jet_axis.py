@@ -177,10 +177,12 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
           graph_min  = ROOT.TGraph(hist_min)
           graph_max  = ROOT.TGraph(hist_max)
+          graph_frac = self.fractional_error(h_central,hist_min,hist_max)
 
           graph_cent.SetName('g_input_%s_R%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
           graph_min .SetName('g_min_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
           graph_max .SetName('g_max_input_%s_R%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          graph_frac.SetName('g_frac_input_%s_R%s_%s_pT_%i_%i'% ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
           xtit = self.obs_label
           ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
@@ -189,6 +191,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           self.pretty_1D_object(graph_cent,2,2,1,tit, xtit, ytit, True)
           self.pretty_1D_object(graph_min ,1,1,2,tit, xtit, ytit)
           self.pretty_1D_object(graph_max ,1,1,2,tit, xtit, ytit)
+          self.pretty_1D_object(graph_frac,2,2,1,tit, xtit, ytit, True)
 
           outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
           if not os.path.exists(outpdfname):
@@ -203,6 +206,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           graph_cent.Write()
           graph_min .Write()
           graph_max .Write()
+          graph_frac.Write()
 
         # -----------------------------------------------------
         # Setting the filled histograms as attributes

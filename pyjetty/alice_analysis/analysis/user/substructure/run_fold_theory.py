@@ -467,6 +467,7 @@ class TheoryFolding():
            graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
            graph_min = ROOT.TGraph(hist_min)
            graph_max = ROOT.TGraph(hist_max)
+           graph_frac = self.fractional_error(h_central,hist_min,hist_max)
 
            h_central.SetName('h1_folded_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            hist_min .SetName('h1_min_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
@@ -475,6 +476,7 @@ class TheoryFolding():
            graph_cent.SetName('g_folded_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            graph_min .SetName('g_min_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            graph_max .SetName('g_max_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+           graph_frac.SetName('g_frac_folded_%s_R%s_%s_%s_pT_%i_%i'% ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
            # Now doing the same, for the histograms with no MPI corrections
            name_central_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
@@ -482,6 +484,7 @@ class TheoryFolding():
            graph_cent_noMPI = self.histo_to_graph(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
            graph_min_noMPI = ROOT.TGraph(hist_min_noMPI)
            graph_max_noMPI = ROOT.TGraph(hist_max_noMPI)
+           graph_frac_noMPI = self.fractional_error(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
 
            h_central_noMPI.SetName('h1_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            hist_min_noMPI .SetName('h1_min_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
@@ -490,6 +493,7 @@ class TheoryFolding():
            graph_cent_noMPI.SetName('g_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            graph_min_noMPI .SetName('g_min_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
            graph_max_noMPI .SetName('g_max_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+           graph_frac_noMPI.SetName('g_frac_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'% ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
 
            xtit = self.obs_label
            ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
@@ -499,10 +503,12 @@ class TheoryFolding():
            self.pretty_1D_object(graph_cent_noMPI, 8,2,1,tit_noMPI, xtit, ytit, True)
            self.pretty_1D_object(graph_min_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
            self.pretty_1D_object(graph_max_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
-    
+           self.pretty_1D_object(graph_frac_noMPI, 8,2,1,tit_noMPI, xtit,'frac', True)
+
            self.pretty_1D_object(graph_cent      ,62,2,1,tit      , xtit, ytit, True)
            self.pretty_1D_object(graph_min       , 1,1,2,tit      , xtit, ytit)
            self.pretty_1D_object(graph_max       , 1,1,2,tit      , xtit, ytit)
+           self.pretty_1D_object(graph_frac      ,62,2,1,tit      , xtit,'frac', True)
 
            outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
            if not os.path.exists(outpdfname):
@@ -522,6 +528,7 @@ class TheoryFolding():
            graph_cent_noMPI.Write()
            graph_min_noMPI .Write()
            graph_max_noMPI .Write()
+           graph_frac_noMPI.Write()
 
            h_central .Write()
            hist_min  .Write()
@@ -529,6 +536,7 @@ class TheoryFolding():
            graph_cent.Write()
            graph_min .Write()
            graph_max .Write()
+           graph_frac.Write()
 
          #---------------------------
          # Create some pdf with plots
@@ -923,6 +931,34 @@ class TheoryFolding():
     
     if tit != '':    
         h1.SetTitle(tit)
+
+  #----------------------------------------------------------------------
+  # Produce graph with fractional error
+  #----------------------------------------------------------------------
+  def fractional_error(self, h_cen, h_min, h_max):
+    bin_ctr = []
+    min_val = []
+    max_val = []
+    npts = 0
+    for b in range(0,h_cen.GetNbinsX()):
+      npts += 1
+      bin_ctr.append(h_cen.GetBinCenter (b+1))
+      cent_val = h_cen.GetBinContent(b+1)
+      if cent_val==0.:
+        cent_val = 1.
+      min_val.append((h_cen.GetBinContent(b+1)-h_min.GetBinContent(b+1))/cent_val)
+      max_val.append((h_max.GetBinContent(b+1)-h_cen.GetBinContent(b+1))/cent_val)
+    listofones = [1] * npts
+    listofzeros = [0] * npts
+
+    bin_ctr = array('d',bin_ctr)
+    listofones = array('d',listofones)
+    listofzeros = array('d',listofzeros)
+    min_val = array('d',min_val)
+    max_val = array('d',max_val)
+
+    graph = ROOT.TGraphAsymmErrors(npts,bin_ctr,listofones,listofzeros,listofzeros,min_val,max_val)
+    return graph
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
