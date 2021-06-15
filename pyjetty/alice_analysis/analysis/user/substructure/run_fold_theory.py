@@ -72,6 +72,7 @@ class TheoryFolding():
       # this corresponds to a label in the RM name which indicates whether we are going from parton to charged-hadron level, or
       # from hadron to charged-hadron level, ...
       self.folding_type = config['folding_type'] 
+      self.response_levels = config['response_levels']
 
       self.theory_dir = config['theory_dir']
 
@@ -216,68 +217,71 @@ class TheoryFolding():
         # loop over response files (e.g. Pythia, Herwig, ...)
         for ri, response in enumerate(self.theory_response_files):
 
-          # Load response matrix 
-          name_RM = "hResponse_JetPt_" + self.observable + "_" + self.folding_type + "_" + label
-          thn = response.Get(name_RM)
-          if thn == None:
-            print('Could not find RM:',name_RM,'in',self.theory_response_fname[ri])
-            exit() 
-
-          print('Loading RM:',name_RM)
-
-          # Create Roounfold object
-          name_roounfold_obj = '%s_Roounfold_%s' % (name_RM, self.theory_response_labels[ri])
-          name_roounfold_thn = '%s_Rebinned_%s'  % (name_RM, self.theory_response_labels[ri])
-
-          '''
-          Response axes:
-          ['p_{T}^{final}', 'p_{T}^{initial}', 'obs^{final}', 'obs^{initial}']
-          e.g. ['p_{T}^{ch}', 'p_{T}^{h}', 'obs^{ch}', 'obs^{h}']
+          for li, lev in enumerate(self.response_levels):
+            
+            # Load response matrix 
+            name_RM = "hResponse_JetPt_"+self.observable+"_"+lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+label
+            thn = response.Get(name_RM)
+            if thn == None:
+              print('Could not find RM:',name_RM,'in',self.theory_response_fname[ri])
+              exit() 
           
-          as compared to the usual
-          ['p_{T}^{initial}', 'p_{T}^{final}', 'obs^{initial}', 'obs^{final}']
-          e.g. ['p_{T}^{det}', 'p_{T}^{truth}', 'obs^{det}', 'obs_{truth}']
-          '''
+            print('Loading RM:',name_RM)
 
-          # If no binning was specified by the user, take the RM binning
-          if self.theory_obs_bins == None:
-            binning = self.return_histo_binning_1D( thn.Projection(3) )
-            binning = [l for l in binning if l >= 0]
-          else:
-            binning = self.theory_obs_bins
-          setattr(self,'binning_'+obs_setting, binning)
-
-          det_pt_bin_array = array('d', self.theory_pt_bins)
-          tru_pt_bin_array = det_pt_bin_array
-          det_obs_bin_array = array('d', binning)
-          tru_obs_bin_array = det_obs_bin_array
-
-          if grooming_setting and self.use_tagging_fraction:
-            # Add bin for underflow value (tagging fraction)
-            det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
+            # Create Roounfold object
+            name_roounfold_obj = '%s_Roounfold_%s' % (name_RM, self.theory_response_labels[ri])
+            name_roounfold_thn = '%s_Rebinned_%s'  % (name_RM, self.theory_response_labels[ri])
+          
+            '''
+            Response axes:
+            ['p_{T}^{final}', 'p_{T}^{initial}', 'obs^{final}', 'obs^{initial}']
+            e.g. ['p_{T}^{ch}', 'p_{T}^{h}', 'obs^{ch}', 'obs^{h}']
+            
+            as compared to the usual
+            ['p_{T}^{initial}', 'p_{T}^{final}', 'obs^{initial}', 'obs^{final}']
+            e.g. ['p_{T}^{det}', 'p_{T}^{truth}', 'obs^{det}', 'obs_{truth}']
+            '''
+          
+            # If no binning was specified by the user, take the RM binning
+            if ri == 0 and li == 0:
+              if self.theory_obs_bins == None:
+                binning = self.return_histo_binning_1D( thn.Projection(3) )
+                binning = [l for l in binning if l >= 0]
+              else:
+                binning = self.theory_obs_bins
+              setattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting, binning)
+          
+            det_pt_bin_array = array('d', self.theory_pt_bins)
+            tru_pt_bin_array = det_pt_bin_array
+            det_obs_bin_array = array('d', binning)
             tru_obs_bin_array = det_obs_bin_array
-
-          n_dim = 4
-          self.histutils.rebin_thn( roounfold_filename, thn, name_roounfold_thn , name_roounfold_obj, n_dim,
-            len(det_pt_bin_array )-1, det_pt_bin_array ,
-            len(det_obs_bin_array)-1, det_obs_bin_array,
-            len(tru_pt_bin_array )-1, tru_pt_bin_array ,
-            len(tru_obs_bin_array)-1, tru_obs_bin_array,
-            label,0,1, grooming_setting!=None )
-
-          f_resp = ROOT.TFile(roounfold_filename, 'READ')
-          roounfold_response = f_resp.Get(name_roounfold_obj)
-          roounfold_thn      = f_resp.Get(name_roounfold_thn )
-          f_resp.Close() 
-
-          setattr(self, name_roounfold_obj, roounfold_response)
-
-          # Save the response matrix to pdf file
-          outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
-          if not os.path.exists(outpdfname):
-            os.makedirs(outpdfname)
-          outpdfname = os.path.join(outpdfname, 'RM_slices_%s.pdf'%(label) )
-          self.plot_RM_slice_histograms( roounfold_thn, outpdfname)
+          
+            if grooming_setting and self.use_tagging_fraction:
+              # Add bin for underflow value (tagging fraction)
+              det_obs_bin_array = np.insert(det_obs_bin_array, 0, -0.001)
+              tru_obs_bin_array = det_obs_bin_array
+          
+            n_dim = 4
+            self.histutils.rebin_thn( roounfold_filename, thn, name_roounfold_thn , name_roounfold_obj, n_dim,
+              len(det_pt_bin_array )-1, det_pt_bin_array ,
+              len(det_obs_bin_array)-1, det_obs_bin_array,
+              len(tru_pt_bin_array )-1, tru_pt_bin_array ,
+              len(tru_obs_bin_array)-1, tru_obs_bin_array,
+              label,0,1, grooming_setting!=None )
+          
+            f_resp = ROOT.TFile(roounfold_filename, 'READ')
+            roounfold_response = f_resp.Get(name_roounfold_obj)
+            roounfold_thn      = f_resp.Get(name_roounfold_thn )
+            f_resp.Close() 
+          
+            setattr(self, name_roounfold_obj, roounfold_response)
+          
+            # Save the response matrix to pdf file
+            outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
+            if not os.path.exists(outpdfname):
+              os.makedirs(outpdfname)
+            outpdfname = os.path.join(outpdfname, 'RM_slices_%s.pdf'%(label) )
+            self.plot_RM_slice_histograms( roounfold_thn, outpdfname)
 
   #----------------------------------------------------------------------
   # Extract binning from a 1D histogram
@@ -322,16 +326,18 @@ class TheoryFolding():
 
        # loop over response files (e.g. Pythia, Herwig, ...)
        for ri, response in enumerate(self.theory_response_files):
-         name_RM = "hResponse_JetPt_" + self.observable + "_" + self.folding_type + "_" + label
-         name_roounfold_obj = '%s_Roounfold_%s' % (name_RM, self.theory_response_labels[ri])
-         response = getattr(self,name_roounfold_obj)
 
-         for sv in range(0,self.theory_scale_vars[jetR][i]):
-           h_folded_ch = response.ApplyToTruth(th_hists[sv])
-           folded_hist_name = 'h2_folded_%s_R%s_obs_pT_%s_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
-           h_folded_ch.SetNameTitle(folded_hist_name,folded_hist_name)
+         for lev in self.response_levels:
+           name_RM = "hResponse_JetPt_"+self.observable+"_"+lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+label
+           name_roounfold_obj = '%s_Roounfold_%s' % (name_RM, self.theory_response_labels[ri])
+           response = getattr(self,name_roounfold_obj)
 
-           setattr(self, folded_hist_name, h_folded_ch)
+           for sv in range(0,self.theory_scale_vars[jetR][i]):
+             h_folded_ch = response.ApplyToTruth(th_hists[sv])
+             folded_hist_name = 'h2_folded_'+self.observable+'_'+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+             h_folded_ch.SetNameTitle(folded_hist_name,folded_hist_name)
+
+             setattr(self, folded_hist_name, h_folded_ch)
 
   #----------------------------------------------------------------------
   # Undoing some scalings that had been introduced before
@@ -367,7 +373,7 @@ class TheoryFolding():
          if self.theory_obs_bins:
           y_bins = array('d', self.theory_obs_bins)
          else:
-          y_bins = array('d',getattr(self,'binning_'+obs_setting))
+          y_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting))
  
          if grooming_setting and self.use_tagging_fraction:
            y_bins = np.insert(y_bins, 0, -0.001)
@@ -390,161 +396,173 @@ class TheoryFolding():
          h2_mpi_ratio.SetDirectory(0)
 
          # ----------------------------------------------------------------------------------------
-         # Loop over scale variations
-         for sv in range(0,self.theory_scale_vars[jetR][i]):
-           
-           folded_hist_name = 'h2_folded_%s_R%s_obs_pT_%s_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri], sv )
-           h2_folded_hist = getattr(self,folded_hist_name)
-
-           # Copy that won't have MPI corrections
-           h2_folded_hist_noMPI = h2_folded_hist.Clone()
-           noMPI_hist_name = 'h2_folded_noMPIcorr_%s_R%s_obs_pT_%s_%s_sv%i' % ( self.observable , (str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri], sv )
-           h2_folded_hist_noMPI.SetNameTitle(noMPI_hist_name,noMPI_hist_name)
-
-           h2_folded_hist.Multiply(h2_mpi_ratio) 
-
-           self.outfile.cd()
-           h2_folded_hist.Write()
-           h2_folded_hist_noMPI.Write()
-
-           # If desired binning is different from what was used for the folding, need to take that into account before changing the pT normalization
-           for n_pt in range(0,len(self.final_pt_bins)-1):
-             # Get the bins that correspond to the pT edges given
-             min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
-
-             projection_name = 'h1_folded_%s_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))            
-             h1_folded_hist = h2_folded_hist.ProjectionY(projection_name,min_bin,max_bin)
-             h1_folded_hist.SetTitle(projection_name)
-             h1_folded_hist.SetDirectory(0)
-
-             # Undo the bin width scaling and set correct normalization
-             norm_factor = h1_folded_hist.Integral()
-             if norm_factor == 0: norm_factor = 1
-             h1_folded_hist.Scale(1./norm_factor, "width")
-
-             for b in range(0,h1_folded_hist.GetNbinsX()):
-               h1_folded_hist.SetBinError(b+1,0)
-
-             # Now doing the same, for the histograms with no MPI corrections
-             projection_name_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-             h1_folded_hist_noMPI = h2_folded_hist_noMPI.ProjectionY(projection_name_noMPI,min_bin,max_bin)
-             h1_folded_hist_noMPI.SetTitle(projection_name_noMPI)
-             h1_folded_hist_noMPI.SetDirectory(0)
-
-              # Undo the bin width scaling and set correct normalization
-             norm_factor_noMPI = h1_folded_hist_noMPI.Integral()
-             if norm_factor_noMPI == 0: norm_factor_noMPI = 1
-             h1_folded_hist_noMPI.Scale(1./norm_factor_noMPI, "width")
-
-             for b in range(0,h1_folded_hist_noMPI.GetNbinsX()):
-               h1_folded_hist_noMPI.SetBinError(b+1,0)
-
-             setattr(self,projection_name      ,h1_folded_hist      ) 
-             setattr(self,projection_name_noMPI,h1_folded_hist_noMPI)
-
-         new_obs_lab = obs_setting
-         if grooming_setting:
-           new_obs_lab += '_'
-           new_obs_lab += self.utils.grooming_label(grooming_setting)
-
-         # Do the loop backwards and find min and max histograms
-         for n_pt in range(0,len(self.final_pt_bins)-1):
-           histo_list = []
-           histo_list_noMPI = []
+         # Loop over response levels
+         for lev in self.response_levels:
+           # Loop over scale variations
            for sv in range(0,self.theory_scale_vars[jetR][i]):
-             projection_name = 'h1_folded_%s_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-             histo_list.append(getattr(self,projection_name))
+              
+             folded_hist_name = 'h2_folded_'+self.observable+'_'+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+             h2_folded_hist = getattr(self,folded_hist_name)
 
-             projection_name_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-             histo_list_noMPI.append(getattr(self,projection_name_noMPI))
+             if lev[2]=='off':          
+               # Copy that won't have MPI corrections
+               h2_folded_hist_noMPI = h2_folded_hist.Clone() 
+               noMPI_hist_name = 'h2_folded_'+self.observable+lev[1]+"_MPI"+lev[2]+'_R%s_obs_pT_%s_%s_sv%i' % ((str)(jetR).replace('.','') , obs_setting , self.theory_response_labels[ri] , sv )
+               h2_folded_hist_noMPI.SetNameTitle(noMPI_hist_name,noMPI_hist_name)
+          
+               h2_folded_hist.Multiply(h2_mpi_ratio)
+          
+             self.outfile.cd()
+             h2_folded_hist.Write()
+             if lev[2]=='off':
+               h2_folded_hist_noMPI.Write()
+          
+             # If desired binning is different from what was used for the folding, need to take that into account before changing the pT normalization
+             for n_pt in range(0,len(self.final_pt_bins)-1):
+               # Get the bins that correspond to the pT edges given
+               min_bin, max_bin = self.bin_position( self.theory_pt_bins, self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1] )
+          
+               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))            
+               h1_folded_hist = h2_folded_hist.ProjectionY(projection_name,min_bin,max_bin)
+               h1_folded_hist.SetTitle(projection_name)
+               h1_folded_hist.SetDirectory(0)
+          
+               # Undo the bin width scaling and set correct normalization
+               norm_factor = h1_folded_hist.Integral()
+               if norm_factor == 0: norm_factor = 1
+               h1_folded_hist.Scale(1./norm_factor, "width")
+          
+               for b in range(0,h1_folded_hist.GetNbinsX()):
+                 h1_folded_hist.SetBinError(b+1,0)
 
-           hist_min      , hist_max        = self.min_max( histo_list )
-           hist_min_noMPI, hist_max_noMPI  = self.min_max( histo_list_noMPI )
+               setattr(self,projection_name, h1_folded_hist)          
 
-           # Create a graph out of these histograms
-           name_central = 'h1_folded_%s_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-           h_central = getattr(self,name_central)
-           graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
-           graph_min = ROOT.TGraph(hist_min)
-           graph_max = ROOT.TGraph(hist_max)
-           graph_frac = self.fractional_error(h_central,hist_min,hist_max)
-
-           h_central.SetName('h1_folded_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           hist_min .SetName('h1_min_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           hist_max .SetName('h1_max_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-
-           graph_cent.SetName('g_folded_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_min .SetName('g_min_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_max .SetName('g_max_folded_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_frac.SetName('g_frac_folded_%s_R%s_%s_%s_pT_%i_%i'% ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-
-           # Now doing the same, for the histograms with no MPI corrections
-           name_central_noMPI = 'h1_folded_noMPIcorr_%s_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-           h_central_noMPI = getattr(self,name_central_noMPI)
-           graph_cent_noMPI = self.histo_to_graph(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
-           graph_min_noMPI = ROOT.TGraph(hist_min_noMPI)
-           graph_max_noMPI = ROOT.TGraph(hist_max_noMPI)
-           graph_frac_noMPI = self.fractional_error(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
-
-           h_central_noMPI.SetName('h1_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           hist_min_noMPI .SetName('h1_min_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           hist_max_noMPI .SetName('h1_max_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-
-           graph_cent_noMPI.SetName('g_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'     % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_min_noMPI .SetName('g_min_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_max_noMPI .SetName('g_max_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i' % ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-           graph_frac_noMPI.SetName('g_frac_folded_noMPIcorr_%s_R%s_%s_%s_pT_%i_%i'% ( self.observable,(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
-
-           xtit = self.obs_label
-           ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
-           tit_noMPI = 'output (charged-level, no MPI) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
-           tit = 'output (charged-level, MPI) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+               if lev[2]=='off':
+                 # Now doing the same, for the histograms with no MPI corrections
+                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+                 h1_folded_hist_noMPI = h2_folded_hist_noMPI.ProjectionY(projection_name_noMPI,min_bin,max_bin)
+                 h1_folded_hist_noMPI.SetTitle(projection_name_noMPI)
+                 h1_folded_hist_noMPI.SetDirectory(0)
+          
+                 # Undo the bin width scaling and set correct normalization
+                 norm_factor_noMPI = h1_folded_hist_noMPI.Integral()
+                 if norm_factor_noMPI == 0: norm_factor_noMPI = 1
+                 h1_folded_hist_noMPI.Scale(1./norm_factor_noMPI, "width")
+          
+                 for b in range(0,h1_folded_hist_noMPI.GetNbinsX()):
+                   h1_folded_hist_noMPI.SetBinError(b+1,0)
          
-           self.pretty_1D_object(graph_cent_noMPI, 8,2,1,tit_noMPI, xtit, ytit, True)
-           self.pretty_1D_object(graph_min_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
-           self.pretty_1D_object(graph_max_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
-           self.pretty_1D_object(graph_frac_noMPI, 8,2,1,tit_noMPI, xtit,'frac', True)
+                 setattr(self,projection_name_noMPI,h1_folded_hist_noMPI)
+          
+           new_obs_lab = obs_setting
+           if grooming_setting:
+             new_obs_lab += '_'
+             new_obs_lab += self.utils.grooming_label(grooming_setting)
+          
+           # Do the loop backwards and find min and max histograms
+           for n_pt in range(0,len(self.final_pt_bins)-1):
+             histo_list = []
+             histo_list_noMPI = []
+             for sv in range(0,self.theory_scale_vars[jetR][i]):
+               projection_name = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))   
+               histo_list.append(getattr(self,projection_name)) 
 
-           self.pretty_1D_object(graph_cent      ,62,2,1,tit      , xtit, ytit, True)
-           self.pretty_1D_object(graph_min       , 1,1,2,tit      , xtit, ytit)
-           self.pretty_1D_object(graph_max       , 1,1,2,tit      , xtit, ytit)
-           self.pretty_1D_object(graph_frac      ,62,2,1,tit      , xtit,'frac', True)
+               if lev[2]=='off':          
+                 projection_name_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv%i_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],sv,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+                 histo_list_noMPI.append(getattr(self,projection_name_noMPI))
+          
+             hist_min, hist_max = self.min_max( histo_list )
+          
+             # Create a graph out of these histograms
+             name_central = 'h1_folded_%s_%s_MPIon_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             h_central = getattr(self,name_central)
+             graph_cent = self.histo_to_graph(h_central,hist_min,hist_max)
+             graph_min = ROOT.TGraph(hist_min)
+             graph_max = ROOT.TGraph(hist_max)
+             graph_frac = self.fractional_error(h_central,hist_min,hist_max)
+          
+             h_central.SetName('h1_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i'     % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+             hist_min .SetName('h1_min_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+             hist_max .SetName('h1_max_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          
+             graph_cent.SetName('g_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i'     % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+             graph_min .SetName('g_min_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+             graph_max .SetName('g_max_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+             graph_frac.SetName('g_frac_folded_%s_%s_MPIon_R%s_%s_%s_pT_%i_%i'% ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          
+             # Now doing the same, for the histograms with no MPI corrections
+             if lev[2]=='off':
+               hist_min_noMPI, hist_max_noMPI  = self.min_max( histo_list_noMPI )
+               name_central_noMPI = 'h1_folded_%s_%s_MPIoff_R%s_%s_%s_sv0_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),obs_setting,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+               h_central_noMPI = getattr(self,name_central_noMPI)
+               graph_cent_noMPI = self.histo_to_graph(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
+               graph_min_noMPI = ROOT.TGraph(hist_min_noMPI)
+               graph_max_noMPI = ROOT.TGraph(hist_max_noMPI)
+               graph_frac_noMPI = self.fractional_error(h_central_noMPI,hist_min_noMPI, hist_max_noMPI)
+          
+               h_central_noMPI.SetName('h1_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i'     % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+               hist_min_noMPI .SetName('h1_min_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+               hist_max_noMPI .SetName('h1_max_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          
+               graph_cent_noMPI.SetName('g_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i'     % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+               graph_min_noMPI .SetName('g_min_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+               graph_max_noMPI .SetName('g_max_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i' % ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+               graph_frac_noMPI.SetName('g_frac_folded_%s_%s_MPIoff_R%s_%s_%s_pT_%i_%i'% ( self.observable,lev[1],(str)(jetR).replace('.',''),new_obs_lab,self.theory_response_labels[ri],(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])))
+          
+             xtit = self.obs_label
+             ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
+             tit_noMPI = 'output (charged-level, MPI off) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             tit = 'output (charged-level, MPI on) %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1]))
+             
+             if lev[2]=='off':
+               self.pretty_1D_object(graph_cent_noMPI, 8,2,1,tit_noMPI, xtit, ytit, True)
+               self.pretty_1D_object(graph_min_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
+               self.pretty_1D_object(graph_max_noMPI , 1,1,2,tit_noMPI, xtit, ytit)
+               self.pretty_1D_object(graph_frac_noMPI, 8,2,1,tit_noMPI, xtit,'frac', True)
+          
+             self.pretty_1D_object(graph_cent      ,62,2,1,tit      , xtit, ytit, True)
+             self.pretty_1D_object(graph_min       , 1,1,2,tit      , xtit, ytit)
+             self.pretty_1D_object(graph_max       , 1,1,2,tit      , xtit, ytit)
+             self.pretty_1D_object(graph_frac      ,62,2,1,tit      , xtit,'frac', True)
+          
+             outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
+             if not os.path.exists(outpdfname):
+               os.makedirs(outpdfname)
 
-           outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
+             if lev[2]=='off':
+               outpdfname_noMPI = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output_noMPI.pdf'%(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+               self.plot_processed_functions( graph_cent_noMPI, graph_min_noMPI, graph_max_noMPI, outpdfname_noMPI )
+
+             outpdfname       = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output.pdf'      %(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+             self.plot_processed_functions( graph_cent      , graph_min      , graph_max      , outpdfname       )
+          
+             # Saving results to root file
+             self.outfile.cd()
+
+             if lev[2]=='off':          
+               h_central_noMPI .Write()
+               hist_min_noMPI  .Write()
+               hist_max_noMPI  .Write()
+               graph_cent_noMPI.Write()
+               graph_min_noMPI .Write()
+               graph_max_noMPI .Write()
+               graph_frac_noMPI.Write()
+          
+             h_central .Write()
+             hist_min  .Write()
+             hist_max  .Write()
+             graph_cent.Write()
+             graph_min .Write()
+             graph_max .Write()
+             graph_frac.Write()
+          
+           #---------------------------
+           # Create some pdf with plots
+           outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
            if not os.path.exists(outpdfname):
              os.makedirs(outpdfname)
-           outpdfname_noMPI = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output_noMPI.pdf'%(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
-           outpdfname       = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_output.pdf'      %(label,(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
-
-           self.plot_processed_functions( graph_cent_noMPI, graph_min_noMPI, graph_max_noMPI, outpdfname_noMPI )
-           self.plot_processed_functions( graph_cent      , graph_min      , graph_max      , outpdfname       )
-
-           # Saving results to root file
-           self.outfile.cd()
-
-           h_central_noMPI .Write()
-           hist_min_noMPI  .Write()
-           hist_max_noMPI  .Write()
-           graph_cent_noMPI.Write()
-           graph_min_noMPI .Write()
-           graph_max_noMPI .Write()
-           graph_frac_noMPI.Write()
-
-           h_central .Write()
-           hist_min  .Write()
-           hist_max  .Write()
-           graph_cent.Write()
-           graph_min .Write()
-           graph_max .Write()
-           graph_frac.Write()
-
-         #---------------------------
-         # Create some pdf with plots
-         outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
-         if not os.path.exists(outpdfname):
-           os.makedirs(outpdfname)
-         outpdfname = os.path.join(outpdfname, 'mpi_corr_%s.pdf'%(label) )
-         self.plot_MPI_correction_histograms( h2_mpi_on, h2_mpi_off, h2_mpi_ratio, outpdfname)
+           outpdfname = os.path.join(outpdfname, 'mpi_corr_%s.pdf'%(label) )
+           self.plot_MPI_correction_histograms( h2_mpi_on, h2_mpi_off, h2_mpi_ratio, outpdfname)
 
   #---------------------------------------------------------------
   # Given a pair of bin-edge values, return their index

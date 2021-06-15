@@ -52,7 +52,7 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
         if self.theory_obs_bins:
           obs_bins = array('d', self.theory_obs_bins)   # bins which we want to have in the result
         else:
-          obs_bins = array('d',getattr(self,'binning_'+obs_setting))
+          obs_bins = array('d',getattr(self,'binning_R%s_'%((str)(jetR).replace('.',''))+obs_setting))
 
         # Add bin for underflow value (tagging fraction)
         if grooming_setting and self.use_tagging_fraction:
