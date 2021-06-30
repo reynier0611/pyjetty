@@ -258,15 +258,26 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     name = 'cResult_R{}_{}_{}-{}'.format(jetR, obs_label, min_pt_truth, max_pt_truth)
     c = ROOT.TCanvas(name, name, 600, 450)
     c.Draw()
-    
     c.cd()
-    myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+
+    if plot_scet:
+      myPad    = ROOT.TPad('myPad'   , 'The pad'       ,0,0.3,1,1)
+      myBotPad = ROOT.TPad('myBotPad', 'The botton pad',0,0,1,0.3)
+      myPad.SetBottomMargin(0.)
+      myBotPad.SetLeftMargin(0.2)
+      myBotPad.SetTopMargin(0.)
+      myBotPad.SetRightMargin(0.05)
+      myBotPad.SetBottomMargin(0.38)
+    else:
+      myPad = ROOT.TPad('myPad', 'The pad',0,0,1,1)
+      myPad.SetBottomMargin(0.13)
     myPad.SetLeftMargin(0.2)
     myPad.SetTopMargin(0.07)
     myPad.SetRightMargin(0.05)
-    myPad.SetBottomMargin(0.13)
+
     myPad.Draw()
-    myPad.cd()
+    if plot_scet:
+      myBotPad.Draw()
     
     xtitle = getattr(self, 'xtitle')
     ytitle = getattr(self, 'ytitle')
@@ -298,15 +309,49 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     if maxb:
       xmax = truth_bin_array[maxb]
 
-    myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',1,xmin,xmax)
-    myBlankHisto.SetNdivisions(108)
-    myBlankHisto.SetXTitle(xtitle)
-    myBlankHisto.GetYaxis().SetTitleOffset(1.5)
-    myBlankHisto.SetYTitle(ytitle)
-    myBlankHisto.SetMaximum(2.5*h.GetMaximum()) 
-    myBlankHisto.SetMinimum(0.)
-    myBlankHisto.Draw("E")
+    myPad.cd()
 
+    if plot_scet:
+      #myPad.SetLogy()
+      myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',1,xmin,xmax)
+      myBlankHisto.SetBinContent(1,-10)
+      myBlankHisto.SetNdivisions(108)
+      myBlankHisto.SetXTitle(xtitle)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.4)
+      myBlankHisto.SetYTitle(ytitle)
+      myBlankHisto.SetMaximum(2.2*h.GetMaximum())
+      myBlankHisto.SetMinimum(-0.6)
+      myBlankHisto.Draw("E")
+      myBlankHisto.GetXaxis().SetTitleSize(0.07)
+      myBlankHisto.GetXaxis().SetLabelSize(0.07)
+      myBlankHisto.GetYaxis().SetTitleSize(0.07)
+      myBlankHisto.GetYaxis().SetLabelSize(0.07)
+
+      myBotPad.cd()
+      myBotBlankHisto = ROOT.TH1F('myBotBlankHisto','Bottom Blank Histogram',1,xmin,xmax)
+      myBotBlankHisto.SetNdivisions(108)
+      myBotBlankHisto.SetXTitle(xtitle)
+      myBotBlankHisto.GetYaxis().SetTitleOffset(0.5)
+      myBotBlankHisto.SetYTitle('Data / SCET')
+      myBotBlankHisto.SetMaximum(1.54)
+      myBotBlankHisto.SetMinimum(0.6)
+      myBotBlankHisto.GetYaxis().SetNdivisions(107)
+      myBotBlankHisto.GetXaxis().SetTitleSize(0.15)
+      myBotBlankHisto.GetXaxis().SetLabelSize(0.15)
+      myBotBlankHisto.GetYaxis().SetTitleSize(0.15)
+      myBotBlankHisto.GetYaxis().SetLabelSize(0.15)
+      myBotBlankHisto.Draw("E")
+    else:
+      myBlankHisto = ROOT.TH1F('myBlankHisto','Blank Histogram',1,xmin,xmax)
+      myBlankHisto.SetNdivisions(108)
+      myBlankHisto.SetXTitle(xtitle)
+      myBlankHisto.GetYaxis().SetTitleOffset(1.5)
+      myBlankHisto.SetYTitle(ytitle)
+      myBlankHisto.SetMaximum(2.54*h.GetMaximum())
+      myBlankHisto.SetMinimum(0.)
+      myBlankHisto.Draw("E")
+
+    myPad.cd()
     # ------------------------------------------------------------------------------------------------
     # Overlay Pythia with the data
     if plot_pythia:
@@ -327,19 +372,19 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     clr_arr = [62,8,92]
 
     if plot_scet:
-      g_scet_orig_c, g_scet_orig_min, g_scet_orig_max = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth)
+      g_scet_orig_c, g_scet_orig_min, g_scet_orig_max, g_scet_orig_f = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth)
       
       g_scet_orig_c.SetMarkerColor(2)
       g_scet_orig_c.SetLineColor(2)
       g_scet_orig_c.SetFillColorAlpha(2,0.2)
-      g_scet_orig_c.Draw('sameLE3')
+      #g_scet_orig_c.Draw('sameLE3')
 
       # Folded theory curves
       lg_scet_folded_c = []
       lg_scet_folded_noMPI_c = []
       for g, gen in enumerate(self.response_labels):
-        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
-        g_scet_folded_noMPI_c, g_scet_folded_noMPI_min, g_scet_folded_noMPI_max = self.scet_folded_prediction_noMPIcorr(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
+        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max, g_scet_folded_f = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
+        g_scet_folded_noMPI_c, g_scet_folded_noMPI_min, g_scet_folded_noMPI_max, g_scet_folded_noMPI_f = self.scet_folded_prediction_noMPIcorr(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
 
         g_scet_folded_c.SetMarkerColor(clr_arr[g])
         g_scet_folded_c.SetLineColor(clr_arr[g])
@@ -350,11 +395,37 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         g_scet_folded_noMPI_c.SetMarkerColor(clr_arr[g+1])
         g_scet_folded_noMPI_c.SetLineColor(clr_arr[g+1])
         g_scet_folded_noMPI_c.SetFillColorAlpha(clr_arr[g+1],0.2)
-        g_scet_folded_noMPI_c.Draw('sameLE3')
+        #g_scet_folded_noMPI_c.Draw('sameLE3')
         lg_scet_folded_noMPI_c.append(g_scet_folded_noMPI_c)
 
+        g_scet_folded_f.SetMarkerColor(clr_arr[g])
+        g_scet_folded_f.SetLineColor(clr_arr[g])
+        g_scet_folded_f.SetFillColorAlpha(clr_arr[g],0.2)
+
+      h_rat = h.Clone()
+      h_rat.SetName(h.GetName()+'_Ratio')
+      for b in range(0,h_rat.GetNbinsX()):
+        h_rat.SetBinContent(b+1,(h_rat.GetBinContent(b+1))/(g_scet_folded_c.Eval(h_rat.GetBinCenter(b+1))))
+        h_rat.SetBinError  (b+1,(h_rat.GetBinError  (b+1))/(g_scet_folded_c.Eval(h_rat.GetBinCenter(b+1))))
+
+      h_sys_rat = h_sys.Clone()
+      h_sys_rat.SetName(h_sys.GetName()+'_Ratio')
+      for b in range(0,h_sys_rat.GetNbinsX()):
+        h_sys_rat.SetBinContent(b+1,(h_sys_rat.GetBinContent(b+1))/(g_scet_folded_c.Eval(h_sys_rat.GetBinCenter(b+1))))
+        h_sys_rat.SetBinError  (b+1,(h_sys_rat.GetBinError  (b+1))/(g_scet_folded_c.Eval(h_sys_rat.GetBinCenter(b+1))))
+
+      myBotPad.cd()
+
+      l1 = ROOT.TLine(0,1,xmax,1); l1.SetLineStyle(2); l1.SetLineWidth(2)
+
+      g_scet_folded_f.Draw('E3 same')
+      l1.Draw('same')
+      h_sys_rat.DrawCopy('E2 same')
+      h_rat.DrawCopy('PE X0 same')
+
     # ------------------------------------------------------------------------------------------------
-    
+    myPad.cd()
+
     h_sys.DrawCopy('E2 same')
     h.DrawCopy('PE X0 same')
   
@@ -362,8 +433,12 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     text_latex.SetNDC()
     text = 'ALICE {}'.format(self.figure_approval_status)
     text_latex.DrawLatex(0.57, 0.87, text)
-    
-    text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+   
+    if self.is_pp: 
+      text = 'pp #sqrt{#it{s}} = 5.02 TeV'
+    else:
+      text = 'Pb-Pb #sqrt{#it{s}} = 5.02 TeV'
+
     text_latex.SetTextSize(0.045)
     text_latex.DrawLatex(0.57, 0.8, text)
 
@@ -402,9 +477,9 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     if plot_pythia:
       myLegend.AddEntry(hPythia, 'PYTHIA8 Monash2013', 'pe')
     if plot_scet:
-      myLegend.AddEntry(g_scet_orig_c,'SCET full-hadron')
+      #myLegend.AddEntry(g_scet_orig_c,'SCET full-hadron')
       for g, gen in enumerate(self.response_labels):
-        myLegend.AddEntry(lg_scet_folded_noMPI_c[g],'SCET charged, no MPI')
+        #myLegend.AddEntry(lg_scet_folded_noMPI_c[g],'SCET charged, no MPI')
         myLegend.AddEntry(lg_scet_folded_c[g],'SCET charged ('+gen+')')
     myLegend.Draw()
 
@@ -440,11 +515,12 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     label += obs_label
     label += '_pT_%i_%i' % ( (int)(min_pt_truth) , (int)(max_pt_truth) )
 
-    g_scet_c = F_scet.Get('g'+label)
+    g_scet_c   = F_scet.Get('g'+label)
     g_scet_min = F_scet.Get('g_min'+label)
     g_scet_max = F_scet.Get('g_max'+label)
+    g_scet_f   = F_scet.Get('g_frac'+label)
 
-    return g_scet_c, g_scet_min, g_scet_max
+    return g_scet_c, g_scet_min, g_scet_max, g_scet_c
 
   #----------------------------------------------------------------------
   def scet_folded_prediction(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, model):
@@ -453,15 +529,16 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     F_scet = ROOT.TFile(scetFilename)
 
-    label = '_folded_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label = '_folded_jet_axis_ch_MPIon_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
     label += '_%s_pT_%i_%i' % ( model , (int)(min_pt_truth) , (int)(max_pt_truth) )
 
-    g_scet_c = F_scet.Get('g'+label)
+    g_scet_c   = F_scet.Get('g'+label)
     g_scet_min = F_scet.Get('g_min'+label)
     g_scet_max = F_scet.Get('g_max'+label)
+    g_scet_f   = F_scet.Get('g_frac'+label)
 
-    return g_scet_c, g_scet_min, g_scet_max
+    return g_scet_c, g_scet_min, g_scet_max, g_scet_f
 
   #----------------------------------------------------------------------
   def scet_folded_prediction_noMPIcorr(self, jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, model):
@@ -470,15 +547,16 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
 
     F_scet = ROOT.TFile(scetFilename)
 
-    label = '_folded_noMPIcorr_jet_axis_R%s_' % ((str)(jetR).replace('.',''))
+    label = '_folded_jet_axis_ch_MPIoff_R%s_' % ((str)(jetR).replace('.',''))
     label += obs_label
     label += '_%s_pT_%i_%i' % ( model , (int)(min_pt_truth) , (int)(max_pt_truth) )
 
-    g_scet_c = F_scet.Get('g'+label)
+    g_scet_c    = F_scet.Get('g'+label)
     g_scet_min = F_scet.Get('g_min'+label)
     g_scet_max = F_scet.Get('g_max'+label)
+    g_scet_f   = F_scet.Get('g_frac'+label)
 
-    return g_scet_c, g_scet_min, g_scet_max
+    return g_scet_c, g_scet_min, g_scet_max, g_scet_f
 
   #----------------------------------------------------------------------
   def pythia_prediction(self, jetR, obs_setting, grooming_setting, obs_label, min_pt_truth, max_pt_truth):
