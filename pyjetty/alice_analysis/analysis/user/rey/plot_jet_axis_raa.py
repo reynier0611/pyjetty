@@ -7,6 +7,7 @@ Based on the code 'plot_subjet_raa.py' by James Mulligan
 
 import sys
 import os
+import argparse
 from array import *
 import numpy as np
 import ROOT
@@ -23,24 +24,24 @@ class PlotRAA(common_base.CommonBase):
   #---------------------------------------------------------------
   # Constructor
   #---------------------------------------------------------------
-  def __init__(self, **kwargs):
+  def __init__(self, config_file='', **kwargs):
       super(PlotRAA, self).__init__(**kwargs)
 
       self.utils = analysis_utils_obs.AnalysisUtils_Obs()
           
-      self.initialize()
+      self.initialize(config_file)
 
   #---------------------------------------------------------------
   # Initialize config file into class members
   #---------------------------------------------------------------
-  def initialize(self):
+  def initialize(self,config_file):
    
     self.output_dir = './jet_axis_plots'
     if not os.path.exists(self.output_dir):
       os.makedirs(self.output_dir)
 
     # Load config file
-    config_file = './jet_axis_plots/plot.yaml'
+    #config_file = './jet_axis_plots/plot.yaml'
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
 
@@ -82,6 +83,7 @@ class PlotRAA(common_base.CommonBase):
     print('Entering main function plot_raa')
 
     for result in self.config_results:
+      print('processing result',result['obs_label']) 
       self.centrality = [0, 10]
       self.init_result(result)
       self.plot_result() 
@@ -92,7 +94,7 @@ class PlotRAA(common_base.CommonBase):
   def init_result(self, result):
     # Init from config file
     self.observable = result['observable']
-    self.jetR = result['jetR']
+    self.jetR =result['jetR']
     self.obs_label = result['obs_label']
     self.min_pt = result['min_pt']
     self.max_pt = result['max_pt']
@@ -111,7 +113,7 @@ class PlotRAA(common_base.CommonBase):
     self.file_AA = ROOT.TFile(self.file_AA_name, 'READ')
 
     self.main_result_name = 'hmain_{}_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
-    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt)
+    self.sys_total_name = 'hResult_{}_systotal_R{}_{}_{}-{}'.format(self.observable, self.jetR, self.obs_label, self.min_pt, self.max_pt) 
 
     h_main_AA = self.file_AA.Get(self.main_result_name)
     h_sys_AA = self.file_AA.Get(self.sys_total_name)
@@ -174,11 +176,11 @@ class PlotRAA(common_base.CommonBase):
 
     if self.plot_theory:
       if self.plot_data:
-        name = 'h_{}_{}-{}_R{}_{}Theory.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label))
+        name = 'h_{}_{}-{}_R{}_{}_{}_{}Theory.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label),self.min_pt,self.max_pt)
       else:
-        name = 'h_{}_{}-{}_R{}_{}TheoryOnly.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label))
+        name = 'h_{}_{}-{}_R{}_{}_{}_{}TheoryOnly.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label),self.min_pt,self.max_pt)
     else:
-        name = 'h_{}_{}-{}_R{}_{}.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label))
+        name = 'h_{}_{}-{}_R{}_{}_{}_{}.pdf'.format(observable_label, self.centrality[0], self.centrality[1], self.utils.remove_periods(self.jetR), self.utils.remove_periods(self.obs_label),self.min_pt,self.max_pt)
     self.output_filename = os.path.join(self.output_dir, name) 
 
     self.utils.set_plotting_options()
@@ -458,6 +460,26 @@ class PlotRAA(common_base.CommonBase):
   '''
 #----------------------------------------------------------------------
 if __name__ == '__main__':
+  print('***************************************************************************')
+  # Define arguments
+  parser = argparse.ArgumentParser(description='Jet substructure analysis')
+  parser.add_argument('-c', '--configFile', action='store',
+                      type=str, metavar='configFile',
+                      default='analysis_config.yaml',
+                      help='Path of config file for analysis')
 
-  analysis = PlotRAA()
+  # Parse the arguments
+  args = parser.parse_args()
+
+  print('Configuring...')
+  print('configFile: \'{0}\''.format(args.configFile))
+
+  # If invalid configFile is given, exit
+  if not os.path.exists(args.configFile):
+    print('File \"{0}\" does not exist! Exiting!'.format(args.configFile))
+    sys.exit(0)
+
+  analysis = PlotRAA(config_file = args.configFile)
   analysis.plot_raa()
+
+  print('***************************************************************************')
