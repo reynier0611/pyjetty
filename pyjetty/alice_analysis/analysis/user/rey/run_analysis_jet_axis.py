@@ -58,6 +58,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       self.plot_herwig = False
 
     # Parameters for SCET comparison
+    self.norm_above_NP = True # If true, normalize above perturbative region
     self.do_theory_comp = False
     if 'do_theory_comp' in config:
       self.do_theory_comp = config['do_theory_comp']
@@ -320,7 +321,7 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
       myBlankHisto.GetYaxis().SetTitleOffset(1.4)
       myBlankHisto.SetYTitle(ytitle)
       myBlankHisto.SetMaximum(2.2*h.GetMaximum())
-      myBlankHisto.SetMinimum(-0.6)
+      myBlankHisto.SetMinimum(-0.7)
       myBlankHisto.Draw("E")
       myBlankHisto.GetXaxis().SetTitleSize(0.07)
       myBlankHisto.GetXaxis().SetLabelSize(0.07)
@@ -372,35 +373,54 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     clr_arr = [62,8,92]
 
     if plot_scet:
-      g_scet_orig_c, g_scet_orig_min, g_scet_orig_max, g_scet_orig_f = self.scet_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth)
-      
-      g_scet_orig_c.SetMarkerColor(2)
-      g_scet_orig_c.SetLineColor(2)
-      g_scet_orig_c.SetFillColorAlpha(2,0.2)
-      #g_scet_orig_c.Draw('sameLE3')
+
+      scet_file = 'folded_scet_calculations.root'
+      scetFilename = os.path.join(self.theory_dir, scet_file)
+      F_scet = ROOT.TFile(scetFilename)
 
       # Folded theory curves
       lg_scet_folded_c = []
-      lg_scet_folded_noMPI_c = []
+      lg_scet_folded_f = []
+
       for g, gen in enumerate(self.response_labels):
-        g_scet_folded_c, g_scet_folded_min, g_scet_folded_max, g_scet_folded_f = self.scet_folded_prediction(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
-        g_scet_folded_noMPI_c, g_scet_folded_noMPI_min, g_scet_folded_noMPI_max, g_scet_folded_noMPI_f = self.scet_folded_prediction_noMPIcorr(jetR, obs_setting, grooming_setting, obs_label,min_pt_truth, max_pt_truth, self.response_labels[g])
 
-        g_scet_folded_c.SetMarkerColor(clr_arr[g])
-        g_scet_folded_c.SetLineColor(clr_arr[g])
-        g_scet_folded_c.SetFillColorAlpha(clr_arr[g],0.2)
+        label = '_folded_jet_axis_ch_MPIon_R%s_' % ((str)(jetR).replace('.',''))
+        label += obs_label
+        label += '_%s_pT_%i_%i' % ( self.response_labels[g] , (int)(min_pt_truth) , (int)(max_pt_truth) )
+        h1_scet_c   = F_scet.Get('h1'+label)
+        h1_scet_min = F_scet.Get('h1_min'+label)
+        h1_scet_max = F_scet.Get('h1_max'+label)
+        
+        # Scale by the integral above NP region
+        if self.norm_above_NP:
+          val_np = self.val_NP_P( jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth )
+          highest_x = self.histo_max_x(h1_scet_c)
+          sf = self.scale_factor(h, h1_scet_c, val_np, highest_x)
+          h1_scet_c  .Scale(sf)
+          h1_scet_min.Scale(sf)
+          h1_scet_max.Scale(sf)
+
+        g_scet_folded_c = self.histo_to_graph(h1_scet_c,h1_scet_min,h1_scet_max)
+        self.pretty_1D_object(g_scet_folded_c,clr_arr[g],2,1,'','','',True)
         g_scet_folded_c.Draw('sameLE3')
+
+        g_scet_folded_f = self.fractional_error(h1_scet_c, h1_scet_min, h1_scet_max)
+        self.pretty_1D_object(g_scet_folded_f,clr_arr[g],2,1,'','','',True)
+
         lg_scet_folded_c.append(g_scet_folded_c)
+        lg_scet_folded_f.append(g_scet_folded_f)
 
-        g_scet_folded_noMPI_c.SetMarkerColor(clr_arr[g+1])
-        g_scet_folded_noMPI_c.SetLineColor(clr_arr[g+1])
-        g_scet_folded_noMPI_c.SetFillColorAlpha(clr_arr[g+1],0.2)
-        #g_scet_folded_noMPI_c.Draw('sameLE3')
-        lg_scet_folded_noMPI_c.append(g_scet_folded_noMPI_c)
+        myBotPad.cd()
+        g_scet_folded_f.Draw('E3 same')
+        myPad.cd()
 
-        g_scet_folded_f.SetMarkerColor(clr_arr[g])
-        g_scet_folded_f.SetLineColor(clr_arr[g])
-        g_scet_folded_f.SetFillColorAlpha(clr_arr[g],0.2)
+      if self.norm_above_NP:
+        l_np_p = self.line_NP_P( jetR, obs_label, grooming_setting, min_pt_truth, max_pt_truth, 1.2*h.GetMaximum() )
+        l_np_p.Draw('same')
+      
+      # -----------------------------
+      # Bottom panel with the ratio
+      myBotPad.cd()
 
       h_rat = h.Clone()
       h_rat.SetName(h.GetName()+'_Ratio')
@@ -414,11 +434,11 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
         h_sys_rat.SetBinContent(b+1,(h_sys_rat.GetBinContent(b+1))/(g_scet_folded_c.Eval(h_sys_rat.GetBinCenter(b+1))))
         h_sys_rat.SetBinError  (b+1,(h_sys_rat.GetBinError  (b+1))/(g_scet_folded_c.Eval(h_sys_rat.GetBinCenter(b+1))))
 
-      myBotPad.cd()
-
+      #myBotPad.cd()
       l1 = ROOT.TLine(0,1,xmax,1); l1.SetLineStyle(2); l1.SetLineWidth(2)
 
-      g_scet_folded_f.Draw('E3 same')
+      #g_scet_folded_f.Draw('E3 same')
+
       l1.Draw('same')
       h_sys_rat.DrawCopy('E2 same')
       h_rat.DrawCopy('PE X0 same')
@@ -1138,6 +1158,165 @@ class RunAnalysisJetAxis(run_analysis.RunAnalysis):
     filename = os.path.join(output_dir, 'RM/RM_'+obs_label+'_{}_{}.pdf'.format(min_pt_truth,max_pt_truth))
     c.SaveAs(filename)
     c.Close()
+
+  #################################################################################################
+  # Determine value that describes boundary between non-perturbative and perturbative region
+  #################################################################################################
+  def val_NP_P( self , jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth ):
+    lam = 1. # GeV
+    formula_pt = (4.5/3.5)*(min_pt_truth**-3.5 - max_pt_truth**-3.5) / \
+                     (min_pt_truth**-4.5 - max_pt_truth**-4.5)
+    return lam/formula_pt
+
+  #################################################################################################
+  # Create line that identifies non-perturbative region
+  #################################################################################################
+  def line_NP_P( self , jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth , maxy ):
+    val_np = self.val_NP_P( jetR, obs_label, grooming_setting , min_pt_truth, max_pt_truth )
+    l_np_p = ROOT.TLine(val_np,1e-9,val_np,maxy)
+    l_np_p.SetLineWidth(2)
+    l_np_p.SetLineStyle(2)
+    l_np_p.SetLineColor(6)
+    return l_np_p
+
+  #---------------------------------------------------------------
+  # Given a central, min, and max histograms, return a graph
+  #---------------------------------------------------------------
+  def histo_to_graph(self,hc,hmin,hmax):
+    tlx = []
+    tly = []
+    tl_min = []
+    tl_max = []
+
+    nBins = hc.GetNbinsX()
+    listofzeros = [0] * nBins
+
+    for b in range(0,nBins):
+      tlx.append(hc.GetXaxis().GetBinCenter(b+1))
+      cent = hc.GetBinContent(b+1)
+      tly.append(cent)
+      tl_min.append(cent-hmin.GetBinContent(b+1))
+      tl_max.append(hmax.GetBinContent(b+1)-cent)
+
+    lx = array('d',tlx)
+    ly = array('d',tly)
+    l_min = array('d',tl_min)
+    l_max = array('d',tl_max)
+    l_0 = array('d',listofzeros)
+
+    graph = ROOT.TGraphAsymmErrors(nBins,lx,ly,l_0,l_0,l_min,l_max)
+
+    return graph
+
+  #################################################################################################
+  # Calculate histogram integral given values rather than bins
+  #################################################################################################
+  def hist_integral( self , h , x_min , x_max , label ):
+    binx_min = h.GetXaxis().FindBin(x_min)
+    binx_max = h.GetXaxis().FindBin(x_max)
+    return h.Integral(binx_min,binx_max,label)
+
+  #################################################################################################
+  # Get upper end of last x bin
+  ################################################################################################
+  def histo_max_x(self , h):
+    return h.GetBinCenter(h.GetXaxis().GetNbins())+h.GetBinWidth(h.GetXaxis().GetNbins())/2.
+
+  #################################################################################################
+  # Given histos h1 and h2, and ranges xmin and xmax, determine the ratios of the integrals
+  # in said interval: ( \int_{xmin}^{xmax} h1 dx )/( \int_{xmin}^{xmax} h2 dx )
+  ################################################################################################
+  def scale_factor(self, h1, h2, xmin, xmax):
+    sf1 = self.hist_integral( h1 , xmin , xmax , "width" )
+    sf2 = self.hist_integral( h2 , xmin , xmax , "width" )
+    return sf1/sf2
+
+  #################################################################################################
+  # Given a central, min, and max histograms, return a graph
+  #################################################################################################
+  def histo_to_graph(self,hc,hmin,hmax):
+    tlx = []
+    tly = []
+    tl_min = []
+    tl_max = []
+
+    nBins = hc.GetNbinsX()
+    listofzeros = [0] * nBins
+
+    for b in range(0,nBins):
+      tlx.append(hc.GetXaxis().GetBinCenter(b+1))
+      cent = hc.GetBinContent(b+1)
+      tly.append(cent)
+      tl_min.append(cent-hmin.GetBinContent(b+1))
+      tl_max.append(hmax.GetBinContent(b+1)-cent)
+
+    lx = array('d',tlx)
+    ly = array('d',tly)
+    l_min = array('d',tl_min)
+    l_max = array('d',tl_max)
+    l_0 = array('d',listofzeros)
+
+    graph = ROOT.TGraphAsymmErrors(nBins,lx,ly,l_0,l_0,l_min,l_max)
+
+    return graph
+
+  #################################################################################################
+  # Produce graph with fractional error
+  #################################################################################################
+  def fractional_error(self, h_cen, h_min, h_max):
+    bin_ctr = []
+    min_val = []
+    max_val = []
+    npts = 0
+    for b in range(0,h_cen.GetNbinsX()):
+      npts += 1
+      bin_ctr.append(h_cen.GetBinCenter (b+1))
+      cent_val = h_cen.GetBinContent(b+1)
+      if cent_val==0.:
+        cent_val = 1.
+      min_val.append((h_cen.GetBinContent(b+1)-h_min.GetBinContent(b+1))/cent_val)
+      max_val.append((h_max.GetBinContent(b+1)-h_cen.GetBinContent(b+1))/cent_val)
+    listofones = [1] * npts
+    listofzeros = [0] * npts
+
+    bin_ctr = array('d',bin_ctr)
+    listofones = array('d',listofones)
+    listofzeros = array('d',listofzeros)
+    min_val = array('d',min_val)
+    max_val = array('d',max_val)
+
+    graph = ROOT.TGraphAsymmErrors(npts,bin_ctr,listofones,listofzeros,listofzeros,min_val,max_val)
+    return graph
+
+  #################################################################################################
+  # Edit 1D histogram and graphs
+  #################################################################################################
+  def pretty_1D_object(self,h1,color=1,lwidth=1,lstyle=1,tit='',xtit='',ytit='',Fill=False):
+    h1.SetLineColor(color)
+    h1.SetMarkerColor(color)
+    if Fill:
+        h1.SetFillColorAlpha(color,0.2)
+    h1.SetLineStyle(lstyle)
+    h1.SetLineWidth(lwidth)
+
+    h1.GetXaxis().SetLabelSize(0.07)
+    h1.GetXaxis().SetTitleSize(0.07)
+    h1.GetXaxis().CenterTitle()
+    h1.GetXaxis().SetNdivisions(107)
+    if xtit != '':
+        h1.GetXaxis().SetTitle(xtit)
+    h1.GetXaxis().SetTitleOffset(1)
+
+    h1.GetYaxis().SetLabelSize(0.08)
+    h1.GetYaxis().SetTitleSize(0.08)
+    h1.GetYaxis().CenterTitle()
+    h1.GetYaxis().SetNdivisions(107)
+    if ytit != '':
+        h1.GetYaxis().SetTitle(ytit)
+    h1.GetYaxis().SetTitleOffset(1.2)
+
+    if tit != '':
+        h1.SetTitle(tit)
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':
