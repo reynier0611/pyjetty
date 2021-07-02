@@ -275,13 +275,17 @@ class TheoryFolding():
             f_resp.Close() 
           
             setattr(self, name_roounfold_obj, roounfold_response)
-          
+            setattr(self, name_roounfold_thn, roounfold_thn     ) 
+
             # Save the response matrix to pdf file
             outpdfname = os.path.join(self.output_dir, 'control_plots', 'RM_and_MPI' )
             if not os.path.exists(outpdfname):
               os.makedirs(outpdfname)
             outpdfname = os.path.join(outpdfname, 'RM_slices_%s.pdf'%(label) )
             self.plot_RM_slice_histograms( roounfold_thn, outpdfname)
+
+            #self.outfile.cd()
+            #roounfold_thn.Write()
 
   #----------------------------------------------------------------------
   # Extract binning from a 1D histogram
@@ -977,6 +981,52 @@ class TheoryFolding():
 
     graph = ROOT.TGraphAsymmErrors(npts,bin_ctr,listofones,listofzeros,listofzeros,min_val,max_val)
     return graph
+
+  #----------------------------------------------------------------------
+  # Plot a comparison of the input SCET calculation to generator projections
+  #----------------------------------------------------------------------
+  def plot_comparison_SCET_gen_input( self, g_scet, jetR , obs_setting , grooming_setting, lev0, lev1, lev2, gen, pTmin, pTmax, outpdfname):
+
+    label = self.create_label( jetR , obs_setting , grooming_setting )
+    name_RM = "hResponse_JetPt_"+self.observable+"_"+lev0+"_"+lev1+"_MPI"+lev2+"_"+label
+    hRM_name = '%s_Rebinned_%s'  % (name_RM, gen)
+
+    hRM = getattr(self,hRM_name)
+    hRM.GetAxis(1).SetRangeUser(pTmin,pTmax)
+    h1_gen = hRM.Projection(3)
+    h1_gen.SetName(hRM.GetName()+'proj_obs_pT_%i_%i'%(pTmin,pTmax))
+    h1_gen.Scale(1./h1_gen.Integral('width'))
+    h1_gen.SetLineColor(1)
+
+    xtit = self.obs_label
+    ytit = '#frac{1}{#sigma} #frac{d#sigma}{d'+xtit+'}'
+    tit = obs_setting
+    if grooming_setting:
+      if 'sd' in grooming_setting: 
+        tit+=' SD (z_{cut}=%.1f,#beta=%i)'%(grooming_setting['sd'][0],grooming_setting['sd'][1])
+    tit += ', input %i < #it{p}_{T}^{jet} < %i GeV/#it{c}'%((int)(pTmin),(int)(pTmax))
+    self.pretty_1D_object(h1_gen,1,2,1,tit, xtit, ytit)
+
+    c1 = ROOT.TCanvas('c1','c1',900,600)
+    c1.SetLeftMargin(0.22)
+    c1.SetRightMargin(0.03)
+    c1.SetBottomMargin(0.15)
+    h1_gen.Draw()
+    h1_gen.Draw('samehist')
+    
+    g_scet.Draw('sameLE3')
+
+    leg = ROOT.TLegend(0.5,0.5,0.85,0.85)
+    leg.SetLineColor(0)
+    leg.AddEntry(g_scet,'SCET')
+    leg.AddEntry(h1_gen,gen+', '+lev0+', MPI '+lev2)
+    leg.Draw('same')
+
+    c1.Draw()
+    c1.Print(outpdfname)
+    del h1_gen
+    del leg
+    del c1
 
 #----------------------------------------------------------------------
 if __name__ == '__main__':

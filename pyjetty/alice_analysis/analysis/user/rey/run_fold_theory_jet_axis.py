@@ -4,6 +4,7 @@
 Code to do theory folding in order to compare to the measured distributions
 The class 'TheoryFolding' below inherits from the 'TheoryFolding' class in:
 pyjetty/alice_analysis/analysis/user/substructure/run_fold_theory.py
+reynier@lbl.gov
 """
 
 import sys
@@ -196,8 +197,15 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
           outpdfname = os.path.join(self.output_dir, 'control_plots' , 'processed_plots' )
           if not os.path.exists(outpdfname):
             os.makedirs(outpdfname)
-          outpdfname = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_input.pdf'%(self.create_label(jetR,obs_setting,grooming_setting),(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
-          self.plot_processed_functions( graph_cent, graph_min, graph_max, outpdfname)
+          outpdfname_1 = os.path.join(outpdfname, 'theory_%s_pT_%i_%i_GeVc_input.pdf'%(self.create_label(jetR,obs_setting,grooming_setting),(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+          self.plot_processed_functions( graph_cent, graph_min, graph_max, outpdfname_1)
+
+          # loop over response files (e.g. Pythia, Herwig, ...)
+          for ri, response in enumerate(self.theory_response_files):
+            for lev in self.response_levels:
+              outpdfname_2 = os.path.join(outpdfname, 'comp_gen_input_theory_%s_pT_%i_%i_GeVc_'%(self.create_label(jetR,obs_setting,grooming_setting),(int)(self.final_pt_bins[n_pt]),(int)(self.final_pt_bins[n_pt+1])) )
+              outpdfname_2 += lev[0]+"_"+lev[1]+"_MPI"+lev[2]+"_"+self.theory_response_labels[ri]+".pdf" 
+              self.plot_comparison_SCET_gen_input( graph_cent, jetR , obs_setting , grooming_setting, lev[0], lev[1], lev[2], self.theory_response_labels[ri], self.final_pt_bins[n_pt], self.final_pt_bins[n_pt+1], outpdfname_2)
 
           self.outfile.cd()
           h_central .Write()
