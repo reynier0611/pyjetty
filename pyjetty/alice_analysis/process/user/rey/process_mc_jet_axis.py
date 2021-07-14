@@ -71,7 +71,7 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       else:
           for R_max in self.max_distance:            
             name = 'hResidual_JetPt_{}_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
-            h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -1*jetR, jetR)
+            h = ROOT.TH3F(name, name, 300, 0, 300, 80, 0, jetR, 100, -2,2)
             h.GetXaxis().SetTitle('p_{T,truth}')
             h.GetYaxis().SetTitle('#DeltaR_{truth}')
             h.GetZaxis().SetTitle('#frac{#DeltaR_{det}-#DeltaR_{truth}}{#DeltaR_{truth}}')
@@ -84,26 +84,33 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
       min = [0., 0., 0., 0.]
       max = [150., 300., jetR, jetR]
 
-      if 'Standard_SD' in self.obs_settings[self.observable][i]:
-        #max[2] *= 1./10.
-        #max[3] *= 1./10.
-        if grooming_setting['sd'][0] == 0.1:
-          max[2] *= 1./8.
-          max[3] *= 1./8.
-        elif grooming_setting['sd'][0] == 0.2:
-          max[2] *= 1./5.
-          max[3] *= 1./5.
-        elif grooming_setting['sd'][0] == 0.3:
-          max[2] *= 1./4. 
-          max[3] *= 1./4.
-
       if self.is_pp:
         name = 'hResponse_JetPt_{}_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-        self.create_thn(name, title, dim, nbins, min, max)
+        if 'Standard_SD' in self.obs_settings[self.observable][i]:
+          binning = np.concatenate((np.linspace(0., 0.00001, 2), np.linspace(0.00625*jetR, jetR*245./400.,98),np.array([jetR])))
+          nbins[2] = len(binning) - 1
+          nbins[3] = len(binning) - 1
+          self.create_thn_asym_bin(name, title, dim, nbins, min, max,binning)
+        else:
+          binning = np.linspace(0,jetR,81)
+          nbins[2] = len(binning) - 1
+          nbins[3] = len(binning) - 1
+          self.create_thn_asym_bin(name, title, dim, nbins, min, max,binning)
       else:
         for R_max in self.max_distance:
           name = 'hResponse_JetPt_{}_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
-          self.create_thn(name, title, dim, nbins, min, max)
+          if 'Standard_SD' in self.obs_settings[self.observable][i]: 
+            binning = np.concatenate((np.linspace(0., 0.00001, 2), np.linspace(0.00625*jetR, jetR*245./400.,98),np.array([jetR])))
+            nbins[2] = len(binning) - 1
+            nbins[3] = len(binning) - 1
+            #self.create_thn(name, title, dim, nbins, min, max)
+            self.create_thn_asym_bin(name, title, dim, nbins, min, max,binning)
+          else:
+            #self.create_thn(name, title, dim, nbins, min, max)
+            binning = np.linspace(0,jetR,81)
+            nbins[2] = len(binning) - 1
+            nbins[3] = len(binning) - 1
+            self.create_thn_asym_bin(name, title, dim, nbins, min, max,binning)
 
       name = 'h_{}_JetPt_Truth_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
       h = ROOT.TH2F(name, name, 30, 0, 300, 100, 0, 1.0)
@@ -191,6 +198,24 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
     self.fill_response(self.observable, jetR, jet_pt_det_ungroomed, jet_pt_truth_ungroomed,
                        deltaR_det, deltaR_truth, obs_label, R_max, prong_match = False)   
 
+  #---------------------------------------------------------------
+  # Create thn and set as class attribute from name, dim
+  #   and lists of nbins, xmin, xmax.
+  #---------------------------------------------------------------
+  def create_thn_asym_bin(self, name, title, dim, nbins, xmin, xmax, obs_bins):
+
+    nbins_arr = (nbins)
+    xmin_arr = (min)
+    xmax_arr = (max)
+    nbins_array = array('i', nbins)
+    xmin_array = array('d', xmin)
+    xmax_array = array('d', xmax)
+    h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
+    for i in range(0, dim):
+      h.GetAxis(i).SetTitle(title[i])
+      if i > 1:
+        h.SetBinEdges(i, array('d', obs_bins))
+    setattr(self, name, h)
 ##################################################################
 if __name__ == '__main__':
   # Define arguments

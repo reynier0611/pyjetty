@@ -18,6 +18,7 @@ import argparse
 # Data analysis and plotting
 import ROOT
 import yaml
+import numpy as np
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -56,28 +57,28 @@ class ProcessData_jet_axis(process_data_base.ProcessDataBase):
           grooming_label = ''
 
         max_obs = jetR
-
-        if 'Standard_SD' in self.obs_settings[self.observable][i]:
-          #max_obs *= 1./10.
-          if grooming_setting['sd'][0] == 0.1:
-            max_obs *= 1./8.
-          elif grooming_setting['sd'][0] == 0.2:
-            max_obs *= 1./5.
-          elif grooming_setting['sd'][0] == 0.3:
-            max_obs *= 1./4.
-
         if self.is_pp:
           name = 'h_{}_JetPt_R{}_{}{}'.format(self.observable, jetR, axes, grooming_label)
-          h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, max_obs)
+          if 'Standard_SD' in self.obs_settings[self.observable][i]:
+            binning = np.concatenate((np.linspace(0., 0.00001, 2), np.linspace(0.00625*jetR, jetR*245./400.,98),np.array([jetR])))
+            h = ROOT.TH2F(name, name, 300, 0, 300,len(binning)-1,binning)
+          else:
+            binning = np.linspace(0,jetR,81)
+            h = ROOT.TH2F(name, name, 300, 0, 300,len(binning)-1,binning)
           h.GetXaxis().SetTitle('p_{T,ch jet}')
-          h.GetYaxis().SetTitle('#Delta R')
+          h.GetYaxis().SetTitle('#it{#DeltaR}_{axis}')
           setattr(self, name, h)
         else:
           for R_max in self.max_distance:
             name = 'h_{}_JetPt_R{}_{}{}_Rmax{}'.format(self.observable, jetR, axes, grooming_label, R_max)
-            h = ROOT.TH2F(name, name, 300, 0, 300, 200, 0, max_obs)
+            if 'Standard_SD' in self.obs_settings[self.observable][i]: 
+              binning = np.concatenate((np.linspace(0., 0.00001, 2), np.linspace(0.00625*jetR, jetR*245./400.,98),np.array([jetR])))
+              h = ROOT.TH2F(name, name, 300, 0, 300,len(binning)-1,binning)
+            else:
+              binning = np.linspace(0,jetR,81)
+              h = ROOT.TH2F(name, name, 300, 0, 300,len(binning)-1,binning)
             h.GetXaxis().SetTitle('p_{T,ch jet}')
-            h.GetYaxis().SetTitle('#Delta R')
+            h.GetYaxis().SetTitle('#it{#DeltaR}_{axis}')
             setattr(self, name, h)
 
   #---------------------------------------------------------------
