@@ -53,8 +53,6 @@ class ProcessMC_jet_axis(process_mc_base.ProcessMCBase):
   def initialize_user_output_objects_R(self, jetR):
 
     for i, axes in enumerate(self.obs_settings[self.observable]):
-      print('******',axes)
-
       grooming_setting = self.obs_grooming_settings[self.observable][i]
       if grooming_setting:
         grooming_label = self.utils.grooming_label(grooming_setting)
