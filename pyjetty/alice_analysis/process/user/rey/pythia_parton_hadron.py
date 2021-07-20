@@ -243,7 +243,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
 
                 # THn for full to charged hadron-level folding
                 title = ['p_{T}^{ch jet}', 'p_{T}^{h jet}',obs_label+'^{ch}', obs_label+'^{h}']
-                name = 'hResponse_JetPt_' + self.observable + '_h2ch' + common_name_2
+                name = 'hResponse_JetPt_' + self.observable + '_h_ch_MPIoff' + common_name_2
                 h = ROOT.THnF(name, name, dim, nbins_array, xmin_array, xmax_array)
                 for i in range(0, dim):
                     h.GetAxis(i).SetTitle(title[i])
@@ -479,7 +479,7 @@ class pythia_parton_hadron(process_base.ProcessBase):
               # 4D response matrices for "forward folding" from full to charged hadron-level
               x = ([jch.pt(), jh.pt(), deltaR_ch, deltaR_h])
               x_array = array.array('d', x)
-              name = 'hResponse_JetPt_' + self.observable + '_h2ch' + common_name_2
+              name = 'hResponse_JetPt_' + self.observable + '_h_ch_MPIoff' + common_name_2
               getattr(self, name ).Fill(x_array)
            
     #---------------------------------------------------------------
