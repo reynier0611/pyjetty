@@ -30,7 +30,6 @@ ROOT.gROOT.SetBatch(True)
 class TheoryFolding(run_fold_theory.TheoryFolding):
 
   def load_theory_curves(self):
-    rainbow=[51,53,55,57,59,61,63,65,66,68,80,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,99] 
 
     self.theory_scale_vars = {}
 
@@ -277,11 +276,15 @@ class TheoryFolding(run_fold_theory.TheoryFolding):
       c1.cd(4)
       h_list[i].Draw('LEGO1')
  
-      c1.Draw()
-   
-      if i == 0: c1.Print(outpdfname+'(')
-      elif i == len(h_list_no_scaling)-1:  c1.Print(outpdfname+')')
-      else:  c1.Print(outpdfname)
+      c1.Draw()   
+
+      if len(h_list_no_scaling)==1:
+        c1.Print(outpdfname)
+      else: 
+        if i == 0: c1.Print(outpdfname+'(')
+        elif i == len(h_list_no_scaling)-1:  c1.Print(outpdfname+')')
+        else:  c1.Print(outpdfname)
+
       del c1
  
 #----------------------------------------------------------------------
